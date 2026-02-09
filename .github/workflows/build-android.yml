@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -23,15 +23,13 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
     
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+    - name: Accept Android Licenses
+      run: |
+        yes | sdkmanager --licenses || true
+    
+    - name: Install Android Build Tools
+      run: |
+        sdkmanager "build-tools;34.0.0" "platforms;android-34"
     
     - name: Copy frontend files to Android assets
       run: |
@@ -42,15 +40,25 @@ jobs:
         echo "✅ Frontend files copied"
         ls -la mobile/android/app/src/main/assets/www/
     
-    - name: Generate Gradle Wrapper
+    - name: Check Gradle Wrapper
       working-directory: ./mobile/android
       run: |
-        gradle wrapper --gradle-version 8.2
-        chmod +x gradlew
+        ls -la
+        if [ -f "gradlew" ]; then
+          echo "✅ gradlew found"
+          chmod +x gradlew
+        else
+          echo "❌ gradlew not found"
+          exit 1
+        fi
     
     - name: Build Debug APK
       working-directory: ./mobile/android
-      run: ./gradlew assembleDebug --stacktrace
+      run: |
+        export ANDROID_HOME=$ANDROID_SDK_ROOT
+        ./gradlew assembleDebug --stacktrace --info
+      env:
+        ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
     
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
@@ -62,8 +70,11 @@ jobs:
     - name: Build Release APK
       working-directory: ./mobile/android
       run: |
-        ./gradlew assembleRelease --stacktrace
+        export ANDROID_HOME=$ANDROID_SDK_ROOT
+        ./gradlew assembleRelease --stacktrace --info
         ls -la app/build/outputs/apk/release/ || echo "Release APK not found"
+      env:
+        ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
     
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
