@@ -1,0 +1,97 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+      with:
+        api-level: 34
+        build-tools: 34.0.0
+    
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+    
+    - name: Copy frontend files to Android assets
+      run: |
+        mkdir -p mobile/android/app/src/main/assets/www
+        cp mobile/index.html mobile/android/app/src/main/assets/www/
+        cp mobile/styles.css mobile/android/app/src/main/assets/www/
+        cp mobile/app.js mobile/android/app/src/main/assets/www/
+        echo "✅ Frontend files copied"
+        ls -la mobile/android/app/src/main/assets/www/
+    
+    - name: Grant execute permission for gradlew
+      run: chmod +x mobile/android/gradlew
+    
+    - name: Build Debug APK
+      working-directory: ./mobile/android
+      run: ./gradlew assembleDebug --stacktrace
+    
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: AACTP-Retrospective-Debug
+        path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
+    
+    - name: Build Release APK
+      working-directory: ./mobile/android
+      run: ./gradlew assembleRelease --stacktrace
+    
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: AACTP-Retrospective-Release
+        path: mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
+        retention-days: 30
+    
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: AACTP Retrospective v${{ github.run_number }}
+        body: |
+          Automated build from GitHub Actions
+          - Debug APK for testing
+          - Release APK (unsigned)
+          
+          ## 安装说明
+          1. 下载 APK 文件
+          2. 在Android设备上允许"安装未知来源应用"
+          3. 安装并打开应用
+          
+          ## 功能特性
+          - 完全离线运行
+          - 本地数据存储
+          - 支持数据导出/导入
+          - 适配Android 7.0+
+        draft: false
+        prerelease: false

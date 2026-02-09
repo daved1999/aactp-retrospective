@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#2c3e50">
+  <title>AACTP项目复盘画布</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- 侧边导航 -->
+    <nav class="sidebar">
+      <div class="logo">
+        <h2>AACTP</h2>
+        <p>项目复盘画布</p>
+      </div>
+      <ul class="nav-menu">
+        <li class="nav-item active" onclick="showDashboard()">
+          <span class="nav-icon">📊</span>
+          <span>驾驶舱</span>
+        </li>
+        <li class="nav-item" onclick="showProjectList()">
+          <span class="nav-icon">📁</span>
+          <span>项目列表</span>
+        </li>
+        <li class="nav-item" onclick="createNewProject()">
+          <span class="nav-icon">➕</span>
+          <span>新建复盘</span>
+        </li>
+      </ul>
+      <div class="nav-footer">
+        <button class="btn-text" onclick="exportData()" style="color: white; opacity: 0.8;">📤 导出数据</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(this.files[0])">
+        <button class="btn-text" onclick="$('#import-file').click()" style="color: white; opacity: 0.8; margin-top: 10px;">📥 导入数据</button>
+      </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <!-- 驾驶舱视图 -->
+      <div id="dashboard-view" class="view">
+        <header class="page-header">
+          <h1>项目复盘驾驶舱</h1>
+          <p>全局数据监控与快速导航</p>
+        </header>
+
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+          <div class="stat-card projects">
+            <div class="stat-icon">📁</div>
+            <div class="stat-info">
+              <h3 id="total-projects">0</h3>
+              <p>总项目数</p>
+            </div>
+          </div>
+          <div class="stat-card goals">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-info">
+              <h3 id="total-goals">0</h3>
+              <p>阶段目标</p>
+            </div>
+          </div>
+          <div class="stat-card strategies">
+            <div class="stat-icon">📋</div>
+            <div class="stat-info">
+              <h3 id="total-strategies">0</h3>
+              <p>评估策略</p>
+            </div>
+          </div>
+          <div class="stat-card reflections">
+            <div class="stat-icon">💭</div>
+            <div class="stat-info">
+              <h3 id="total-reflections">0</h3>
+              <p>反思记录</p>
+            </div>
+          </div>
+          <div class="stat-card insights">
+            <div class="stat-icon">💡</div>
+            <div class="stat-info">
+              <h3 id="total-insights">0</h3>
+              <p>总结规律</p>
+            </div>
+          </div>
+          <div class="stat-card actions">
+            <div class="stat-icon">🚀</div>
+            <div class="stat-info">
+              <h3 id="total-actions">0</h3>
+              <p>行动计划</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 图表和最近记录 -->
+        <div class="dashboard-grid">
+          <!-- 左侧图表 -->
+          <div class="chart-section">
+            <div class="section-header">
+              <h3>复盘数据分布</h3>
+            </div>
+            <div class="chart-container">
+              <canvas id="statsChart"></canvas>
+            </div>
+          </div>
+
+          <!-- 右侧最近复盘 -->
+          <div class="recent-section">
+            <div class="section-header">
+              <h3>最近5条复盘</h3>
+              <button class="btn-text" onclick="showProjectList()">查看全部</button>
+            </div>
+            <div id="recent-projects" class="recent-list">
+              <!-- 动态加载 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 快速入口 -->
+        <div class="quick-access">
+          <h3>快速入口</h3>
+          <div class="quick-grid">
+            <div class="quick-card" onclick="createNewProject()">
+              <div class="quick-icon">➕</div>
+              <span>新建复盘项目</span>
+            </div>
+            <div class="quick-card" onclick="showProjectList()">
+              <div class="quick-icon">🔍</div>
+              <span>查询复盘项目</span>
+            </div>
+            <div class="quick-card" onclick="showReports()">
+              <div class="quick-icon">📈</div>
+              <span>数据报表分析</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 项目列表视图 -->
+      <div id="project-list-view" class="view hidden">
+        <header class="page-header">
+          <h1>复盘项目列表</h1>
+          <button class="btn-primary" onclick="createNewProject()">+ 新建复盘</button>
+        </header>
+        <div id="projects-container" class="projects-grid">
+          <!-- 动态加载 -->
+        </div>
+      </div>
+
+      <!-- 项目详情/编辑视图 -->
+      <div id="project-detail-view" class="view hidden">
+        <header class="page-header">
+          <div class="header-left">
+            <button class="btn-back" onclick="goBack()">← 返回</button>
+            <h1 id="project-title">项目详情</h1>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" onclick="deleteCurrentProject()">删除项目</button>
+            <button class="btn-primary" onclick="saveProject()">保存项目</button>
+          </div>
+        </header>
+
+        <!-- 项目基本信息 -->
+        <div class="project-info-card">
+          <h3>基本信息</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>企业名称</label>
+              <input type="text" id="project-enterprise" placeholder="输入企业名称">
+            </div>
+            <div class="form-group">
+              <label>项目名称</label>
+              <input type="text" id="project-name" placeholder="输入项目名称">
+            </div>
+            <div class="form-group">
+              <label>项目编码</label>
+              <input type="text" id="project-code" placeholder="输入项目编码">
+            </div>
+            <div class="form-group">
+              <label>复盘日期</label>
+              <input type="date" id="project-date">
+            </div>
+          </div>
+        </div>
+
+        <!-- 四大模块卡片 -->
+        <div class="modules-grid">
+          <div class="module-card" style="border-top: 4px solid #e74c3c;" onclick="openModule('goals')">
+            <div class="module-header">
+              <h3>回顾目标</h3>
+              <span class="module-status" id="goals-status">未填写</span>
+            </div>
+            <div class="module-preview" id="goals-preview">
+              <p>点击填写总目标和阶段目标</p>
+            </div>
+            <div class="module-footer">
+              <span class="module-count" id="goals-count">0 个阶段目标</span>
+              <span class="module-arrow">→</span>
+            </div>
+          </div>
+
+          <div class="module-card" style="border-top: 4px solid #f39c12;" onclick="openModule('strategies')">
+            <div class="module-header">
+              <h3>评估策略</h3>
+              <span class="module-status" id="strategies-status">未填写</span>
+            </div>
+            <div class="module-preview" id="strategies-preview">
+              <p>点击填写评估策略</p>
+            </div>
+            <div class="module-footer">
+              <span class="module-count" id="strategies-count">0 个策略</span>
+              <span class="module-arrow">→</span>
+            </div>
+          </div>
+
+          <div class="module-card" style="border-top: 4px solid #3498db;" onclick="openModule('reflections')">
+            <div class="module-header">
+              <h3>反思过程</h3>
+              <span class="module-status" id="reflections-status">未填写</span>
+            </div>
+            <div class="module-preview" id="reflections-preview">
+              <p>点击填写亮点、不足、变化项、标杆案例</p>
+            </div>
+            <div class="module-footer">
+              <span class="module-count" id="reflections-count">0 条记录</span>
+              <span class="module-arrow">→</span>
+            </div>
+          </div>
+
+          <div class="module-card" style="border-top: 4px solid #27ae60;" onclick="openModule('summaries')">
+            <div class="module-header">
+              <h3>总结规律</h3>
+              <span class="module-status" id="summaries-status">未填写</span>
+            </div>
+            <div class="module-preview" id="summaries-preview">
+              <p>点击填写领悟、规律、行为和行动计划</p>
+            </div>
+            <div class="module-footer">
+              <span class="module-count" id="summaries-count">0 条规律</span>
+              <span class="module-arrow">→</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模块编辑视图 -->
+      <div id="module-edit-view" class="view hidden">
+        <header class="page-header">
+          <div class="header-left">
+            <button class="btn-back" onclick="closeModule()">← 返回项目</button>
+            <h1 id="module-title">模块编辑</h1>
+          </div>
+        </header>
+        <div id="module-content">
+          <!-- 动态加载模块表单 -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
