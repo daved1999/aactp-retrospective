@@ -3,8 +3,6 @@ name: Build Android APK
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -22,42 +20,36 @@ jobs:
     
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
-    
-    - name: Accept Android Licenses
+      
+    - name: Accept licenses
       run: yes | sdkmanager --licenses || true
+      
+    - name: Install SDK components
+      run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
     
-    - name: Install Android Build Tools
-      run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
-    
-    - name: Copy frontend files to Android assets
+    - name: Copy frontend files
       run: |
         mkdir -p mobile/android/app/src/main/assets/www
         cp mobile/index.html mobile/android/app/src/main/assets/www/
         cp mobile/styles.css mobile/android/app/src/main/assets/www/
         cp mobile/app.js mobile/android/app/src/main/assets/www/
-        echo "✅ Frontend files copied"
     
-    - name: Generate Gradle Wrapper
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: 8.2
+    
+    - name: Build with Gradle
       working-directory: ./mobile/android
       run: |
-        # 安装 Gradle
-        sudo apt-get update
-        sudo apt-get install -y gradle
-        # 生成 wrapper
         gradle wrapper --gradle-version 8.2
-        ls -la gradle/wrapper/
-    
-    - name: Build Debug APK
-      working-directory: ./mobile/android
-      run: |
-        chmod +x gradlew
-        ./gradlew assembleDebug --stacktrace
+        ./gradlew assembleDebug --info
       env:
         ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
-    
-    - name: Upload Debug APK
+        
+    - name: Upload APK
       uses: actions/upload-artifact@v4
+      if: success()
       with:
-        name: AACTP-Retrospective-Debug
+        name: debug-apk
         path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
-        retention-days: 30
