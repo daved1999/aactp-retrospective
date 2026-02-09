@@ -45,8 +45,11 @@ jobs:
         echo "✅ Frontend files copied"
         ls -la mobile/android/app/src/main/assets/www/
     
-    - name: Grant execute permission for gradlew
-      run: chmod +x mobile/android/gradlew
+    - name: Generate Gradle Wrapper
+      working-directory: ./mobile/android
+      run: |
+        gradle wrapper --gradle-version 8.2
+        chmod +x gradlew
     
     - name: Build Debug APK
       working-directory: ./mobile/android
@@ -61,7 +64,9 @@ jobs:
     
     - name: Build Release APK
       working-directory: ./mobile/android
-      run: ./gradlew assembleRelease --stacktrace
+      run: |
+        ./gradlew assembleRelease --stacktrace
+        ls -la app/build/outputs/apk/release/ || echo "Release APK not found"
     
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
