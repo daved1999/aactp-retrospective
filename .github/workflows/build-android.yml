@@ -5,7 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,12 +24,10 @@ jobs:
       uses: android-actions/setup-android@v3
     
     - name: Accept Android Licenses
-      run: |
-        yes | sdkmanager --licenses || true
+      run: yes | sdkmanager --licenses || true
     
     - name: Install Android Build Tools
-      run: |
-        sdkmanager "build-tools;34.0.0" "platforms;android-34"
+      run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
     
     - name: Copy frontend files to Android assets
       run: |
@@ -38,25 +36,22 @@ jobs:
         cp mobile/styles.css mobile/android/app/src/main/assets/www/
         cp mobile/app.js mobile/android/app/src/main/assets/www/
         echo "✅ Frontend files copied"
-        ls -la mobile/android/app/src/main/assets/www/
     
-    - name: Check Gradle Wrapper
+    - name: Generate Gradle Wrapper
       working-directory: ./mobile/android
       run: |
-        ls -la
-        if [ -f "gradlew" ]; then
-          echo "✅ gradlew found"
-          chmod +x gradlew
-        else
-          echo "❌ gradlew not found"
-          exit 1
-        fi
+        # 安装 Gradle
+        sudo apt-get update
+        sudo apt-get install -y gradle
+        # 生成 wrapper
+        gradle wrapper --gradle-version 8.2
+        ls -la gradle/wrapper/
     
     - name: Build Debug APK
       working-directory: ./mobile/android
       run: |
-        export ANDROID_HOME=$ANDROID_SDK_ROOT
-        ./gradlew assembleDebug --stacktrace --info
+        chmod +x gradlew
+        ./gradlew assembleDebug --stacktrace
       env:
         ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
     
@@ -66,48 +61,3 @@ jobs:
         name: AACTP-Retrospective-Debug
         path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
         retention-days: 30
-    
-    - name: Build Release APK
-      working-directory: ./mobile/android
-      run: |
-        export ANDROID_HOME=$ANDROID_SDK_ROOT
-        ./gradlew assembleRelease --stacktrace --info
-        ls -la app/build/outputs/apk/release/ || echo "Release APK not found"
-      env:
-        ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
-    
-    - name: Upload Release APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: AACTP-Retrospective-Release
-        path: mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
-        retention-days: 30
-    
-    - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v${{ github.run_number }}
-        name: AACTP Retrospective v${{ github.run_number }}
-        body: |
-          Automated build from GitHub Actions
-          - Debug APK for testing
-          - Release APK (unsigned)
-
-          ## 安装说明
-          1. 下载 APK 文件
-          2. 在Android设备上允许"安装未知来源应用"
-          3. 安装并打开应用
-
-          ## 功能特性
-          - 完全离线运行
-          - 本地数据存储
-          - 支持数据导出/导入
-          - 适配Android 7.0+
-        files: |
-          mobile/android/app/build/outputs/apk/debug/app-debug.apk
-          mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
