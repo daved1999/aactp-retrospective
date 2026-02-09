@@ -53,7 +53,7 @@ jobs:
       run: ./gradlew assembleDebug --stacktrace
     
     - name: Upload Debug APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: AACTP-Retrospective-Debug
         path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
@@ -64,7 +64,7 @@ jobs:
       run: ./gradlew assembleRelease --stacktrace
     
     - name: Upload Release APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: AACTP-Retrospective-Release
         path: mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
@@ -72,26 +72,29 @@ jobs:
     
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ github.run_number }}
-        release_name: AACTP Retrospective v${{ github.run_number }}
+        name: AACTP Retrospective v${{ github.run_number }}
         body: |
           Automated build from GitHub Actions
           - Debug APK for testing
           - Release APK (unsigned)
-          
+
           ## 安装说明
           1. 下载 APK 文件
           2. 在Android设备上允许"安装未知来源应用"
           3. 安装并打开应用
-          
+
           ## 功能特性
           - 完全离线运行
           - 本地数据存储
           - 支持数据导出/导入
           - 适配Android 7.0+
+        files: |
+          mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
         draft: false
         prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
