@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AACTP项目复盘画布 - 驾驶舱</title>
+  <title>ZQM-AACTP项目复盘画布 - 驾驶舱</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -12,7 +12,7 @@
     <!-- 侧边导航 -->
     <nav class="sidebar">
       <div class="logo">
-        <h2>AACTP</h2>
+        <h2>ZQM-AACTP</h2>
         <p>项目复盘画布</p>
       </div>
       <ul class="nav-menu">
@@ -29,6 +29,11 @@
           <span>新建复盘</span>
         </li>
       </ul>
+      <div class="nav-footer">
+        <button class="btn-text" onclick="exportData()" style="color: white; opacity: 0.8;">📤 导出数据</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(this.files[0])">
+        <button class="btn-text" onclick="document.getElementById('import-file').click()" style="color: white; opacity: 0.8; margin-top: 10px;">📥 导入数据</button>
+      </div>
     </nav>
 
     <!-- 主内容区 -->

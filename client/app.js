@@ -1104,6 +1104,82 @@ function resetSearch() {
   showToast('查询条件已重置');
 }
 
+// Data Export/Import for backup
+async function exportData() {
+  try {
+    // Fetch all projects
+    const projects = await fetchJSON(`${API}/projects`);
+    
+    // Create export data structure
+    const exportData = {
+      projects: [],
+      exportDate: new Date().toISOString(),
+      version: '1.0'
+    };
+    
+    // Fetch details for each project
+    for (const project of projects) {
+      const projectDetail = await fetchJSON(`${API}/projects/${project.id}`);
+      const dashboard = await fetchJSON(`${API}/projects/${project.id}/dashboard`);
+      
+      exportData.projects.push({
+        ...projectDetail,
+        dashboard: dashboard
+      });
+    }
+    
+    // Download as JSON file
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zqm-aactp-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('数据导出成功');
+  } catch (error) {
+    console.error('Export failed:', error);
+    showToast('数据导出失败', true);
+  }
+}
+
+async function importData(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.projects && Array.isArray(data.projects)) {
+        let importedCount = 0;
+        
+        // Import each project
+        for (const project of data.projects) {
+          try {
+            // Create project without id
+            const { id, dashboard, ...projectData } = project;
+            await fetchJSON(`${API}/projects`, {
+              method: 'POST',
+              body: JSON.stringify(projectData)
+            });
+            importedCount++;
+          } catch (err) {
+            console.error('Failed to import project:', err);
+          }
+        }
+        
+        showToast(`成功导入 ${importedCount} 个项目`);
+        loadDashboardData();
+        loadProjects();
+      } else {
+        showToast('数据格式错误', true);
+      }
+    } catch (err) {
+      showToast('文件解析失败', true);
+    }
+  };
+  reader.readAsText(file);
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   showDashboard();
