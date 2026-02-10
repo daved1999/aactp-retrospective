@@ -41,8 +41,9 @@ body {
 }
 
 .logo p {
-  font-size: 14px;
-  opacity: 0.8;
+  font-size: 18px;
+  font-weight: bold;
+  opacity: 0.9;
 }
 
 .nav-menu {
