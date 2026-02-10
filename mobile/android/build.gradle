@@ -13,9 +13,8 @@ buildscript {
     }
 }
 
+// 项目仓库已在 settings.gradle 中配置
+// 不要在此处添加 repositories
 allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
+    // 项目级配置（不含仓库）
 }
