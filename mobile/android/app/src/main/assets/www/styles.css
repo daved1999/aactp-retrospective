@@ -1032,11 +1032,11 @@ body {
   }
 }
 
-/* Dark mode support */
+/* Dark mode support - Disabled, using light theme */
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: #2a2a2a;
-    color: #e0e0e0;
+    background-color: #f8f8f8;
+    color: #333;
   }
   
   .stat-card,
@@ -1047,8 +1047,8 @@ body {
   .project-info-card,
   .module-card,
   #module-content {
-    background: #2d2d2d;
-    color: #e0e0e0;
+    background: white;
+    color: #333;
   }
   
   .page-header h1,
@@ -1057,22 +1057,22 @@ body {
   .project-info-card h3,
   .module-section h3,
   .module-header h3 {
-    color: #e0e0e0;
+    color: #2c3e50;
   }
   
   .recent-item,
   .quick-card,
   .subsection,
   .item-card {
-    background: #3d3d3d;
+    background: #f8f9fa;
   }
   
   .form-group input,
   .form-group textarea,
   .form-group select {
-    background: #3d3d3d;
-    color: #e0e0e0;
-    border-color: #555;
+    background: white;
+    color: #333;
+    border-color: #ddd;
   }
 }
 
