@@ -244,6 +244,72 @@ function renderProjectsList(projects) {
   `).join('');
 }
 
+// 查询项目功能
+function searchProjects() {
+  const db = getDB();
+  let projects = db.projects || [];
+  
+  // 获取查询条件
+  const startDate = $('#search-start-date')?.value;
+  const endDate = $('#search-end-date')?.value;
+  const keyword = $('#search-keyword')?.value?.trim().toLowerCase();
+  
+  let filteredProjects = [...projects];
+  
+  // 按日期段查询
+  if (startDate || endDate) {
+    filteredProjects = filteredProjects.filter(project => {
+      if (!project.review_date) return false;
+      
+      const projectDate = new Date(project.review_date);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      
+      // 设置时间为当天的开始和结束，确保包含整天
+      if (start) start.setHours(0, 0, 0, 0);
+      if (end) end.setHours(23, 59, 59, 999);
+      
+      if (start && end) {
+        return projectDate >= start && projectDate <= end;
+      } else if (start) {
+        return projectDate >= start;
+      } else if (end) {
+        return projectDate <= end;
+      }
+      return true;
+    });
+  }
+  
+  // 按项目名称关键词查询
+  if (keyword) {
+    filteredProjects = filteredProjects.filter(project => {
+      const nameMatch = project.name?.toLowerCase().includes(keyword);
+      const enterpriseMatch = project.enterprise?.toLowerCase().includes(keyword);
+      const codeMatch = project.project_code?.toLowerCase().includes(keyword);
+      return nameMatch || enterpriseMatch || codeMatch;
+    });
+  }
+  
+  // 渲染查询结果
+  renderProjectsList(filteredProjects);
+  
+  // 显示查询结果统计
+  showToast(`查询完成，找到 ${filteredProjects.length} 个项目`);
+}
+
+// 重置查询条件
+function resetSearch() {
+  // 清空查询条件
+  if ($('#search-start-date')) $('#search-start-date').value = '';
+  if ($('#search-end-date')) $('#search-end-date').value = '';
+  if ($('#search-keyword')) $('#search-keyword').value = '';
+  
+  // 重新加载所有项目
+  loadProjects();
+  
+  showToast('查询条件已重置');
+}
+
 function loadProjectDetail(projectId) {
   const db = getDB();
   const project = db.projects.find(p => p.id === projectId);
