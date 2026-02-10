@@ -231,9 +231,14 @@ function renderProjectsList(projects) {
     return;
   }
   
-  container.innerHTML = projects.map(project => `
+  container.innerHTML = projects.map(project => {
+    const completionBadge = project.completed
+      ? '<span style="display: inline-block; padding: 2px 8px; background: #27ae60; color: white; border-radius: 4px; font-size: 12px; margin-left: 8px;">已完成</span>'
+      : '<span style="display: inline-block; padding: 2px 8px; background: #95a5a6; color: white; border-radius: 4px; font-size: 12px; margin-left: 8px;">进行中</span>';
+
+    return `
     <div class="project-card" onclick="showProjectDetail('${project.id}')">
-      <h3>${project.name}</h3>
+      <h3>${project.name}${completionBadge}</h3>
       <p>${project.enterprise || '未填写企业'}</p>
       <p>编码: ${project.project_code || '未设置'}</p>
       <div class="project-meta">
@@ -241,34 +246,35 @@ function renderProjectsList(projects) {
         <span>🕐 ${formatDateTime(project.updatedAt)}</span>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 // 查询项目功能
 function searchProjects() {
   const db = getDB();
   let projects = db.projects || [];
-  
+
   // 获取查询条件
   const startDate = $('#search-start-date')?.value;
   const endDate = $('#search-end-date')?.value;
   const keyword = $('#search-keyword')?.value?.trim().toLowerCase();
-  
+  const completedFilter = $('#search-completed')?.value;
+
   let filteredProjects = [...projects];
-  
+
   // 按日期段查询
   if (startDate || endDate) {
     filteredProjects = filteredProjects.filter(project => {
       if (!project.review_date) return false;
-      
+
       const projectDate = new Date(project.review_date);
       const start = startDate ? new Date(startDate) : null;
       const end = endDate ? new Date(endDate) : null;
-      
+
       // 设置时间为当天的开始和结束，确保包含整天
       if (start) start.setHours(0, 0, 0, 0);
       if (end) end.setHours(23, 59, 59, 999);
-      
+
       if (start && end) {
         return projectDate >= start && projectDate <= end;
       } else if (start) {
@@ -279,7 +285,7 @@ function searchProjects() {
       return true;
     });
   }
-  
+
   // 按项目名称关键词查询
   if (keyword) {
     filteredProjects = filteredProjects.filter(project => {
@@ -289,10 +295,18 @@ function searchProjects() {
       return nameMatch || enterpriseMatch || codeMatch;
     });
   }
-  
+
+  // 按完成状态查询
+  if (completedFilter !== '') {
+    const isCompleted = completedFilter === 'true';
+    filteredProjects = filteredProjects.filter(project => {
+      return project.completed === isCompleted;
+    });
+  }
+
   // 渲染查询结果
   renderProjectsList(filteredProjects);
-  
+
   // 显示查询结果统计
   showToast(`查询完成，找到 ${filteredProjects.length} 个项目`);
 }
@@ -303,10 +317,11 @@ function resetSearch() {
   if ($('#search-start-date')) $('#search-start-date').value = '';
   if ($('#search-end-date')) $('#search-end-date').value = '';
   if ($('#search-keyword')) $('#search-keyword').value = '';
-  
+  if ($('#search-completed')) $('#search-completed').value = '';
+
   // 重新加载所有项目
   loadProjects();
-  
+
   showToast('查询条件已重置');
 }
 
@@ -323,6 +338,7 @@ function loadProjectDetail(projectId) {
   $('#project-name').value = project.name || '';
   $('#project-code').value = project.project_code || '';
   $('#project-date').value = project.review_date || '';
+  $('#project-completed').checked = project.completed || false;
   
   updateModuleCards(project);
 }
@@ -374,7 +390,8 @@ function saveProject() {
     enterprise: $('#project-enterprise').value,
     name: $('#project-name').value,
     project_code: $('#project-code').value,
-    review_date: $('#project-date').value
+    review_date: $('#project-date').value,
+    completed: $('#project-completed')?.checked || false
   };
   
   if (!data.name) {
@@ -409,6 +426,22 @@ function saveProject() {
     showToast('项目创建成功');
   }
   loadDashboardData();
+}
+
+// 切换项目完成状态
+function toggleProjectCompletion() {
+  const db = getDB();
+  const isCompleted = $('#project-completed').checked;
+
+  if (currentProjectId) {
+    const index = db.projects.findIndex(p => p.id === currentProjectId);
+    if (index !== -1) {
+      db.projects[index].completed = isCompleted;
+      db.projects[index].updatedAt = new Date().toISOString();
+      saveDB(db);
+      showToast(isCompleted ? '项目已标记为完成' : '项目已标记为未完成');
+    }
+  }
 }
 
 function deleteCurrentProject() {

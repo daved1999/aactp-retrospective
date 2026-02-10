@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#2c3e50">
-  <title>AACTP项目复盘画布</title>
+  <title>ZQM-AACTP项目复盘画布</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -18,7 +18,7 @@
       <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="打开菜单">
         ☰
       </button>
-      <span class="mobile-header-title">AACTP项目复盘</span>
+      <span class="mobile-header-title">ZQM-AACTP项目复盘</span>
     </header>
 
     <!-- 侧边栏遮罩层 -->
@@ -27,7 +27,7 @@
     <!-- 侧边导航 -->
     <nav class="sidebar">
       <div class="logo">
-        <h2>AACTP</h2>
+        <h2>ZQM-AACTP</h2>
         <p>项目复盘画布</p>
       </div>
       <ul class="nav-menu">
@@ -176,11 +176,19 @@
                 <label>项目名称关键词</label>
                 <input type="text" id="search-keyword" placeholder="输入项目名称关键词">
               </div>
-              <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
-                <button class="btn-primary" onclick="searchProjects()" style="width: 100%;">查询</button>
+              <div class="form-group" style="flex: 1;">
+                <label>完成状态</label>
+                <select id="search-completed" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                  <option value="">全部</option>
+                  <option value="true">已完成</option>
+                  <option value="false">未完成</option>
+                </select>
               </div>
             </div>
             <div class="form-row">
+              <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
+                <button class="btn-primary" onclick="searchProjects()" style="width: 100%;">查询</button>
+              </div>
               <div class="form-group" style="flex: 1;">
                 <button class="btn-secondary" onclick="resetSearch()" style="width: 100%;">重置条件</button>
               </div>
@@ -208,7 +216,16 @@
 
         <!-- 项目基本信息 -->
         <div class="project-info-card">
-          <h3>基本信息</h3>
+          <div class="project-info-header">
+            <h3>基本信息</h3>
+            <div class="completion-status">
+              <label class="checkbox-label">
+                <input type="checkbox" id="project-completed" onchange="toggleProjectCompletion()">
+                <span class="checkmark"></span>
+                完成状态
+              </label>
+            </div>
+          </div>
           <div class="form-grid">
             <div class="form-group">
               <label>企业名称</label>
