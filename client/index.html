@@ -136,6 +136,46 @@
           <h1>复盘项目列表</h1>
           <button class="btn-primary" onclick="createNewProject()">+ 新建复盘</button>
         </header>
+        
+        <!-- 查询区域 -->
+        <div class="search-section">
+          <h3>🔍 查询条件</h3>
+          <div class="search-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>开始日期</label>
+                <input type="date" id="search-start-date" placeholder="选择开始日期">
+              </div>
+              <div class="form-group">
+                <label>结束日期</label>
+                <input type="date" id="search-end-date" placeholder="选择结束日期">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label>项目名称关键词</label>
+                <input type="text" id="search-keyword" placeholder="输入项目名称关键词">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label>完成状态</label>
+                <select id="search-completed" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                  <option value="">全部</option>
+                  <option value="true">已完成</option>
+                  <option value="false">未完成</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
+                <button class="btn-primary" onclick="searchProjects()" style="width: 100%;">查询</button>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <button class="btn-secondary" onclick="resetSearch()" style="width: 100%;">重置条件</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div id="projects-container" class="projects-grid">
           <!-- 动态加载 -->
         </div>
