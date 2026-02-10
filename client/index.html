@@ -196,7 +196,16 @@
 
         <!-- 项目基本信息 -->
         <div class="project-info-card">
-          <h3>基本信息</h3>
+          <div class="project-info-header">
+            <h3>基本信息</h3>
+            <div class="completion-status">
+              <label class="checkbox-label">
+                <input type="checkbox" id="project-completed" onchange="toggleProjectCompletion()">
+                <span class="checkmark"></span>
+                完成状态
+              </label>
+            </div>
+          </div>
           <div class="form-grid">
             <div class="form-group">
               <label>企业名称</label>

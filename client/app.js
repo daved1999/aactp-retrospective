@@ -192,7 +192,10 @@ function renderProjectsList(projects) {
   
   container.innerHTML = projects.map(project => `
     <div class="project-card" onclick="showProjectDetail(${project.id})">
-      <h3>${project.name}</h3>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <h3>${project.name}</h3>
+        ${project.completed ? '<span class="status-badge completed">已完成</span>' : '<span class="status-badge">进行中</span>'}
+      </div>
       <p>${project.enterprise || '未填写企业'}</p>
       <p>编码: ${project.project_code || '未设置'}</p>
       <div class="project-meta">
@@ -211,12 +214,34 @@ async function loadProjectDetail(projectId) {
     $('#project-name').value = project.name || '';
     $('#project-code').value = project.project_code || '';
     $('#project-date').value = project.review_date || '';
+    $('#project-completed').checked = project.completed || false;
     
     // Load dashboard data for this project
     const dashboard = await fetchJSON(`${API}/projects/${projectId}/dashboard`);
     updateModuleCards(dashboard);
   } catch (error) {
     console.error('Failed to load project:', error);
+  }
+}
+
+// 切换项目完成状态
+async function toggleProjectCompletion() {
+  if (!currentProjectId) return;
+  
+  const isCompleted = $('#project-completed').checked;
+  
+  try {
+    await fetchJSON(`${API}/projects/${currentProjectId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        completed: isCompleted
+      })
+    });
+    showToast(isCompleted ? '项目已标记为完成' : '项目已标记为未完成');
+    loadDashboardData();
+  } catch (error) {
+    console.error('Failed to update completion status:', error);
+    showToast('更新失败，请重试', true);
   }
 }
 
@@ -249,6 +274,7 @@ function clearProjectForm() {
   $('#project-name').value = '';
   $('#project-code').value = '';
   $('#project-date').value = '';
+  $('#project-completed').checked = false;
   
   // Reset module cards
   ['goals', 'strategies', 'reflections', 'summaries'].forEach(module => {
@@ -265,7 +291,8 @@ async function saveProject() {
     enterprise: $('#project-enterprise').value,
     name: $('#project-name').value,
     project_code: $('#project-code').value,
-    review_date: $('#project-date').value
+    review_date: $('#project-date').value,
+    completed: $('#project-completed').checked
   };
   
   if (!data.name) {
