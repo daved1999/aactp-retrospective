@@ -35,6 +35,36 @@ function showToast(message, isError = false) {
   setTimeout(() => toast.remove(), 3000);
 }
 
+// Mobile Sidebar Management
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  
+  if (sidebar.classList.contains('active')) {
+    closeSidebar();
+  } else {
+    sidebar.classList.add('active');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+  }
+}
+
+function closeSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  
+  sidebar.classList.remove('active');
+  overlay.classList.remove('active');
+  document.body.style.overflow = ''; // Restore scrolling
+}
+
+// Close sidebar when pressing Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeSidebar();
+  }
+});
+
 // View Management
 function hideAllViews() {
   document.querySelectorAll('.view').forEach(view => view.classList.add('hidden'));

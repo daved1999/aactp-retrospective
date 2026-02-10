@@ -13,6 +13,17 @@
 </head>
 <body>
   <div id="app">
+    <!-- 移动端头部和汉堡菜单 -->
+    <header class="mobile-header">
+      <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="打开菜单">
+        ☰
+      </button>
+      <span class="mobile-header-title">AACTP项目复盘</span>
+    </header>
+
+    <!-- 侧边栏遮罩层 -->
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
     <!-- 侧边导航 -->
     <nav class="sidebar">
       <div class="logo">
@@ -20,15 +31,15 @@
         <p>项目复盘画布</p>
       </div>
       <ul class="nav-menu">
-        <li class="nav-item active" onclick="showDashboard()">
+        <li class="nav-item active" onclick="showDashboard(); closeSidebar();">
           <span class="nav-icon">📊</span>
           <span>驾驶舱</span>
         </li>
-        <li class="nav-item" onclick="showProjectList()">
+        <li class="nav-item" onclick="showProjectList(); closeSidebar();">
           <span class="nav-icon">📁</span>
           <span>项目列表</span>
         </li>
-        <li class="nav-item" onclick="createNewProject()">
+        <li class="nav-item" onclick="createNewProject(); closeSidebar();">
           <span class="nav-icon">➕</span>
           <span>新建复盘</span>
         </li>

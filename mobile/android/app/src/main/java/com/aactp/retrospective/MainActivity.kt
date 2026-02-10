@@ -2,6 +2,7 @@ package com.aactp.retrospective
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -39,6 +40,20 @@ class MainActivity : AppCompatActivity() {
                 it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         }
+        
+        // Handle configuration changes (orientation)
+        handleOrientationChange(resources.configuration.orientation)
+    }
+    
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        handleOrientationChange(newConfig.orientation)
+    }
+    
+    private fun handleOrientationChange(orientation: Int) {
+        // WebView will automatically handle the orientation change
+        // Just ensure the layout is updated
+        webView.requestLayout()
     }
     
     private fun setupWebView() {
