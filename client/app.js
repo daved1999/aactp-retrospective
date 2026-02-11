@@ -1035,12 +1035,19 @@ async function searchProjects() {
     const keyword = $('#search-keyword')?.value?.trim().toLowerCase();
     const completedFilter = $('#search-completed')?.value;
 
+    console.log('查询条件:', { startDate, endDate, keyword, completedFilter });
+    console.log('总项目数:', projects.length);
+
     let filteredProjects = [...projects];
 
     // 按日期段查询
     if (startDate || endDate) {
+      console.log('按日期过滤:', { startDate, endDate });
       filteredProjects = filteredProjects.filter(project => {
-        if (!project.review_date) return false;
+        if (!project.review_date) {
+          console.log('项目无日期:', project.name);
+          return false;
+        }
 
         const projectDate = new Date(project.review_date);
         const start = startDate ? new Date(startDate) : null;
@@ -1050,34 +1057,47 @@ async function searchProjects() {
         if (start) start.setHours(0, 0, 0, 0);
         if (end) end.setHours(23, 59, 59, 999);
 
+        let match = true;
         if (start && end) {
-          return projectDate >= start && projectDate <= end;
+          match = projectDate >= start && projectDate <= end;
         } else if (start) {
-          return projectDate >= start;
+          match = projectDate >= start;
         } else if (end) {
-          return projectDate <= end;
+          match = projectDate <= end;
         }
-        return true;
+        
+        console.log(`项目 ${project.name} 日期 ${project.review_date} 匹配: ${match}`);
+        return match;
       });
     }
 
     // 按项目名称关键词查询
     if (keyword) {
+      console.log('按关键词过滤:', keyword);
       filteredProjects = filteredProjects.filter(project => {
         const nameMatch = project.name?.toLowerCase().includes(keyword);
         const enterpriseMatch = project.enterprise?.toLowerCase().includes(keyword);
         const codeMatch = project.project_code?.toLowerCase().includes(keyword);
-        return nameMatch || enterpriseMatch || codeMatch;
+        const match = nameMatch || enterpriseMatch || codeMatch;
+        console.log(`项目 ${project.name} 关键词匹配: ${match}`);
+        return match;
       });
     }
 
     // 按完成状态查询
     if (completedFilter !== '') {
       const isCompleted = completedFilter === 'true';
+      console.log('按完成状态过滤:', isCompleted);
       filteredProjects = filteredProjects.filter(project => {
-        return project.completed === isCompleted;
+        // 处理 completed 字段可能为 undefined 的情况
+        const projectCompleted = project.completed === true || project.completed === 'true' || project.completed === 1;
+        const match = projectCompleted === isCompleted;
+        console.log(`项目 ${project.name} 完成状态 ${project.completed} 匹配: ${match}`);
+        return match;
       });
     }
+
+    console.log('过滤后项目数:', filteredProjects.length);
 
     // 渲染查询结果
     renderProjectsList(filteredProjects);
@@ -1086,7 +1106,7 @@ async function searchProjects() {
     showToast(`查询完成，找到 ${filteredProjects.length} 个项目`);
   } catch (error) {
     console.error('搜索失败:', error);
-    showToast('搜索失败，请重试', true);
+    showToast('搜索失败: ' + (error.message || '请检查网络连接'), true);
   }
 }
 
