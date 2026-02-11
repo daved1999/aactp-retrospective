@@ -237,15 +237,23 @@ class MainActivity : AppCompatActivity() {
                     downloadDir.mkdirs()
                 }
                 
-                // Create file
-                val file = File(downloadDir, filename)
+                // Create file - if exists, add timestamp
+                var file = File(downloadDir, filename)
+                if (file.exists()) {
+                    val timestamp = SimpleDateFormat("HHmmss", Locale.getDefault()).format(Date())
+                    val nameWithoutExt = filename.substringBeforeLast(".")
+                    val ext = filename.substringAfterLast(".", "")
+                    val newFilename = if (ext.isNotEmpty()) "${nameWithoutExt}_${timestamp}.${ext}" else "${nameWithoutExt}_${timestamp}"
+                    file = File(downloadDir, newFilename)
+                }
+                
                 FileWriter(file).use { writer ->
                     writer.write(content)
                 }
                 
                 // Show success message on UI thread
                 runOnUiThread {
-                    Toast.makeText(context, "文件已保存到: Download/$DOWNLOAD_DIRECTORY/$filename", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "文件已保存到: Download/$DOWNLOAD_DIRECTORY/${file.name}", Toast.LENGTH_LONG).show()
                 }
                 
                 file.absolutePath
