@@ -1040,7 +1040,7 @@ async function searchProjects() {
 
     let filteredProjects = [...projects];
 
-    // 按日期段查询
+    // 按日期段查询 - 使用字符串比较避免时区问题
     if (startDate || endDate) {
       console.log('按日期过滤:', { startDate, endDate });
       filteredProjects = filteredProjects.filter(project => {
@@ -1049,25 +1049,29 @@ async function searchProjects() {
           return false;
         }
 
-        // 将项目日期和查询日期都转换为 YYYY-MM-DD 格式进行比较
-        const projectDateStr = project.review_date.split('T')[0];
-        const projectDate = new Date(projectDateStr + 'T00:00:00');
-        
-        let match = true;
-        if (startDate && endDate) {
-          const start = new Date(startDate + 'T00:00:00');
-          const end = new Date(endDate + 'T23:59:59');
-          match = projectDate >= start && projectDate <= end;
-        } else if (startDate) {
-          const start = new Date(startDate + 'T00:00:00');
-          match = projectDate >= start;
-        } else if (endDate) {
-          const end = new Date(endDate + 'T23:59:59');
-          match = projectDate <= end;
+        try {
+          // 将项目日期转换为 YYYY-MM-DD 格式
+          let projectDateStr = project.review_date;
+          if (projectDateStr.includes('T')) {
+            projectDateStr = projectDateStr.split('T')[0];
+          }
+          
+          // 使用字符串比较日期（YYYY-MM-DD 格式可以直接比较）
+          let match = true;
+          if (startDate && endDate) {
+            match = projectDateStr >= startDate && projectDateStr <= endDate;
+          } else if (startDate) {
+            match = projectDateStr >= startDate;
+          } else if (endDate) {
+            match = projectDateStr <= endDate;
+          }
+          
+          console.log(`项目 ${project.name} 日期 ${projectDateStr} 匹配: ${match}`);
+          return match;
+        } catch (err) {
+          console.error('日期处理错误:', err, project.review_date);
+          return false;
         }
-        
-        console.log(`项目 ${project.name} 日期 ${projectDateStr} 匹配: ${match}`);
-        return match;
       });
     }
 
