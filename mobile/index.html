@@ -45,9 +45,17 @@
         </li>
       </ul>
       <div class="nav-footer">
-        <button class="btn-text" onclick="exportData()" style="color: white; opacity: 0.8;">📤 导出数据</button>
+        <div style="font-size: 12px; opacity: 0.7; margin-bottom: 10px;">数据备份</div>
+        <button class="btn-text" onclick="exportData()" style="color: white; opacity: 0.9; font-size: 14px; display: block; width: 100%; text-align: left; padding: 8px 0;">
+          📤 导出数据
+        </button>
         <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(this.files[0])">
-        <button class="btn-text" onclick="$('#import-file').click()" style="color: white; opacity: 0.8; margin-top: 10px;">📥 导入数据</button>
+        <button class="btn-text" onclick="triggerImport()" style="color: white; opacity: 0.9; font-size: 14px; display: block; width: 100%; text-align: left; padding: 8px 0; margin-top: 5px;">
+          📥 导入数据
+        </button>
+        <div style="font-size: 11px; opacity: 0.6; margin-top: 8px; line-height: 1.4;">
+          导出文件保存在下载文件夹
+        </div>
       </div>
     </nav>
 

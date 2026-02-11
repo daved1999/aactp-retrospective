@@ -3,16 +3,19 @@ package com.aactp.retrospective
 import android.Manifest
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -21,9 +24,22 @@ class MainActivity : AppCompatActivity() {
     
     private lateinit var webView: WebView
     private var backPressedTime: Long = 0
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
     
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
+    }
+    
+    // File picker launcher
+    private val filePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            filePathCallback?.onReceiveValue(arrayOf(uri))
+        } else {
+            filePathCallback?.onReceiveValue(null)
+        }
+        filePathCallback = null
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,7 +89,20 @@ class MainActivity : AppCompatActivity() {
         }
         
         webView.webViewClient = WebViewClient()
-        webView.webChromeClient = WebChromeClient()
+        
+        // Custom WebChromeClient to handle file input
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                this@MainActivity.filePathCallback = filePathCallback
+                // Launch file picker
+                filePickerLauncher.launch("application/json")
+                return true
+            }
+        }
         
         // Load local HTML file
         webView.loadUrl("file:///android_asset/www/index.html")
