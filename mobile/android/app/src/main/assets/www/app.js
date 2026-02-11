@@ -779,8 +779,33 @@ function renderReflectionsByCategory(reflections, category) {
   };
   const suffix = categoryMap[category];
   
+  // 获取该类别的图片
+  const db = getDB();
+  const project = db.projects.find(p => p.id === currentProjectId);
+  const categoryImages = project?.reflectionImages?.[suffix] || [];
+  
   return `
     <div id="${suffix}-section">
+      <!-- 图片展示区域 -->
+      <div class="image-section">
+        <div class="image-section-header">
+          <h4>📷 ${category}插图</h4>
+          <button class="btn-small btn-edit" onclick="selectImagesForCategory('${suffix}')">➕ 添加插图</button>
+          <input type="file" id="image-input-${suffix}" accept="image/*" multiple style="display: none;" onchange="handleImagesSelected('${suffix}', this)">
+        </div>
+        <div class="image-grid" id="image-grid-${suffix}">
+          ${categoryImages.length === 0 ? 
+            '<p class="empty-state">暂无插图，点击上方按钮添加</p>' :
+            categoryImages.map((img, index) => `
+              <div class="image-item">
+                <img src="${img}" alt="${category}图片" onclick="viewImage('${img}')">
+                <button class="image-delete-btn" onclick="deleteImageFromCategory('${suffix}', ${index})">✕</button>
+              </div>
+            `).join('')
+          }
+        </div>
+      </div>
+      
       <div class="item-list">
         ${filtered.length === 0 ? 
           '<p class="empty-state">该分类下暂无记录</p>' : 
@@ -1216,4 +1241,158 @@ function triggerImport() {
   } else {
     showToast('导入功能初始化失败', true);
   }
+}
+
+// ==================== 图片处理功能 ====================
+
+// 为类别选择图片
+function selectImagesForCategory(categorySuffix) {
+  const input = document.getElementById(`image-input-${categorySuffix}`);
+  if (input) {
+    input.value = ''; // Reset to allow selecting same files
+    input.click();
+  } else {
+    showToast('图片选择功能初始化失败', true);
+  }
+}
+
+// 处理选中的图片
+async function handleImagesSelected(categorySuffix, input) {
+  if (!input.files || input.files.length === 0) return;
+  
+  const files = Array.from(input.files);
+  const maxFiles = 10; // 最多10张图片
+  
+  if (files.length > maxFiles) {
+    showToast(`最多只能选择${maxFiles}张图片`, true);
+    return;
+  }
+  
+  showToast(`正在处理${files.length}张图片...`);
+  
+  const db = getDB();
+  const project = db.projects.find(p => p.id === currentProjectId);
+  if (!project) {
+    showToast('项目不存在', true);
+    return;
+  }
+  
+  // Initialize reflectionImages if not exists
+  if (!project.reflectionImages) {
+    project.reflectionImages = {};
+  }
+  if (!project.reflectionImages[categorySuffix]) {
+    project.reflectionImages[categorySuffix] = [];
+  }
+  
+  try {
+    for (const file of files) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        console.warn('Skipping non-image file:', file.name);
+        continue;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showToast(`图片 ${file.name} 超过5MB限制`, true);
+        continue;
+      }
+      
+      // Convert to base64
+      const base64 = await fileToBase64(file);
+      
+      // Add to project
+      project.reflectionImages[categorySuffix].push(base64);
+    }
+    
+    project.updatedAt = new Date().toISOString();
+    saveDB(db);
+    
+    showToast(`成功添加${files.length}张图片`);
+    
+    // Reload current tab to show new images
+    const categoryMap = {
+      'highlights': '亮点',
+      'shortcomings': '不足',
+      'changes': '变化项',
+      'benchmarks': '标杆案例'
+    };
+    const category = categoryMap[categorySuffix];
+    $('#reflections-content').innerHTML = renderReflectionsByCategory(project.reflections || [], category);
+    
+  } catch (err) {
+    console.error('Image processing error:', err);
+    showToast('图片处理失败：' + err.message, true);
+  }
+}
+
+// 将文件转换为Base64
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// 从类别中删除图片
+function deleteImageFromCategory(categorySuffix, imageIndex) {
+  if (!confirm('确定删除这张图片吗？')) return;
+  
+  const db = getDB();
+  const project = db.projects.find(p => p.id === currentProjectId);
+  if (!project || !project.reflectionImages || !project.reflectionImages[categorySuffix]) return;
+  
+  project.reflectionImages[categorySuffix].splice(imageIndex, 1);
+  project.updatedAt = new Date().toISOString();
+  saveDB(db);
+  
+  showToast('图片已删除');
+  
+  // Reload current tab
+  const categoryMap = {
+    'highlights': '亮点',
+    'shortcomings': '不足',
+    'changes': '变化项',
+    'benchmarks': '标杆案例'
+  };
+  const category = categoryMap[categorySuffix];
+  $('#reflections-content').innerHTML = renderReflectionsByCategory(project.reflections || [], category);
+}
+
+// 查看大图
+function viewImage(src) {
+  // Create modal
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  `;
+  
+  const img = document.createElement('img');
+  img.src = src;
+  img.style.cssText = `
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+  `;
+  
+  modal.appendChild(img);
+  document.body.appendChild(modal);
+  
+  // Close on click
+  modal.onclick = () => {
+    document.body.removeChild(modal);
+  };
 }

@@ -44,12 +44,24 @@ class MainActivity : AppCompatActivity() {
         private const val DOWNLOAD_DIRECTORY = "复盘画布"
     }
     
-    // File picker launcher
+    // File picker launcher for single/multiple files
     private val filePickerLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
             filePathCallback?.onReceiveValue(arrayOf(uri))
+        } else {
+            filePathCallback?.onReceiveValue(null)
+        }
+        filePathCallback = null
+    }
+    
+    // Multiple files picker launcher
+    private val multipleFilePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri>? ->
+        if (uris != null && uris.isNotEmpty()) {
+            filePathCallback?.onReceiveValue(uris.toTypedArray())
         } else {
             filePathCallback?.onReceiveValue(null)
         }
@@ -116,8 +128,18 @@ class MainActivity : AppCompatActivity() {
                 fileChooserParams: FileChooserParams?
             ): Boolean {
                 this@MainActivity.filePathCallback = filePathCallback
-                // Launch file picker
-                filePickerLauncher.launch("application/json")
+                
+                // Get accepted mime types
+                val acceptTypes = fileChooserParams?.acceptTypes
+                val isImage = acceptTypes?.any { it.startsWith("image/") } ?: false
+                
+                if (isImage) {
+                    // Launch multiple image picker
+                    multipleFilePickerLauncher.launch("image/*")
+                } else {
+                    // Launch single file picker for JSON
+                    filePickerLauncher.launch("application/json")
+                }
                 return true
             }
         }
