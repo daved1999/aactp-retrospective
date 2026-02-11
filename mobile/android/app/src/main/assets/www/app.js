@@ -463,7 +463,7 @@ function deleteCurrentProject() {
 }
 
 // Module Functions
-function openModule(module) {
+async function openModule(module) {
   currentModule = module;
   hideAllViews();
   $('#module-edit-view').classList.remove('hidden');
@@ -476,14 +476,14 @@ function openModule(module) {
   };
   
   $('#module-title').textContent = titles[module];
-  loadModuleContent(module);
+  await loadModuleContent(module);
 }
 
 function closeModule() {
   showProjectDetail(currentProjectId);
 }
 
-function loadModuleContent(module) {
+async function loadModuleContent(module) {
   const container = $('#module-content');
   const db = getDB();
   const project = db.projects.find(p => p.id === currentProjectId);
@@ -501,7 +501,7 @@ function loadModuleContent(module) {
       renderStrategiesModule(container, project);
       break;
     case 'reflections':
-      renderReflectionsModule(container, project);
+      await renderReflectionsModule(container, project);
       break;
     case 'summaries':
       renderSummariesModule(container, project);
@@ -748,8 +748,11 @@ function deleteStrategy(index) {
   refreshProjectDashboard();
 }
 
-function renderReflectionsModule(container, project) {
+async function renderReflectionsModule(container, project) {
   const reflections = project.reflections || [];
+  
+  // 异步加载亮点分类的图片
+  const highlightsHtml = await renderReflectionsByCategory(reflections, '亮点');
   
   container.innerHTML = `
     <div class="module-section">
@@ -763,7 +766,7 @@ function renderReflectionsModule(container, project) {
       </div>
       
       <div id="reflections-content">
-        ${renderReflectionsByCategory(reflections, '亮点')}
+        ${highlightsHtml}
       </div>
     </div>
   `;
