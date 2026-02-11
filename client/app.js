@@ -1049,24 +1049,24 @@ async function searchProjects() {
           return false;
         }
 
-        const projectDate = new Date(project.review_date);
-        const start = startDate ? new Date(startDate) : null;
-        const end = endDate ? new Date(endDate) : null;
-
-        // 设置时间为当天的开始和结束，确保包含整天
-        if (start) start.setHours(0, 0, 0, 0);
-        if (end) end.setHours(23, 59, 59, 999);
-
+        // 将项目日期和查询日期都转换为 YYYY-MM-DD 格式进行比较
+        const projectDateStr = project.review_date.split('T')[0];
+        const projectDate = new Date(projectDateStr + 'T00:00:00');
+        
         let match = true;
-        if (start && end) {
+        if (startDate && endDate) {
+          const start = new Date(startDate + 'T00:00:00');
+          const end = new Date(endDate + 'T23:59:59');
           match = projectDate >= start && projectDate <= end;
-        } else if (start) {
+        } else if (startDate) {
+          const start = new Date(startDate + 'T00:00:00');
           match = projectDate >= start;
-        } else if (end) {
+        } else if (endDate) {
+          const end = new Date(endDate + 'T23:59:59');
           match = projectDate <= end;
         }
         
-        console.log(`项目 ${project.name} 日期 ${project.review_date} 匹配: ${match}`);
+        console.log(`项目 ${project.name} 日期 ${projectDateStr} 匹配: ${match}`);
         return match;
       });
     }
