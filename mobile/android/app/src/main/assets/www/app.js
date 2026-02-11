@@ -769,7 +769,7 @@ function renderReflectionsModule(container, project) {
   `;
 }
 
-function renderReflectionsByCategory(reflections, category) {
+async function renderReflectionsByCategory(reflections, category) {
   const filtered = reflections.filter(r => r.category === category);
   const categoryMap = {
     '亮点': 'highlights',
@@ -779,10 +779,24 @@ function renderReflectionsByCategory(reflections, category) {
   };
   const suffix = categoryMap[category];
   
-  // 获取该类别的图片
+  // 获取该类别的图片ID
   const db = getDB();
   const project = db.projects.find(p => p.id === currentProjectId);
-  const categoryImages = project?.reflectionImages?.[suffix] || [];
+  const categoryImageIds = project?.reflectionImages?.[suffix] || [];
+  
+  // 异步加载所有图片
+  const imagesHtml = await Promise.all(categoryImageIds.map(async (imageId, index) => {
+    const imageData = await loadImage(imageId);
+    if (imageData) {
+      return `
+        <div class="image-item" data-image-id="${imageId}">
+          <img src="${imageData}" alt="${category}图片" onclick="viewImage('${imageData}')">
+          <button class="image-delete-btn" onclick="deleteImageFromCategory('${suffix}', ${index}, '${imageId}')">✕</button>
+        </div>
+      `;
+    }
+    return '';
+  }));
   
   return `
     <div id="${suffix}-section">
@@ -794,14 +808,9 @@ function renderReflectionsByCategory(reflections, category) {
           <input type="file" id="image-input-${suffix}" accept="image/*" multiple style="display: none;" onchange="handleImagesSelected('${suffix}', this)">
         </div>
         <div class="image-grid" id="image-grid-${suffix}">
-          ${categoryImages.length === 0 ? 
-            '<p class="empty-state">暂无插图，点击上方按钮添加</p>' :
-            categoryImages.map((img, index) => `
-              <div class="image-item">
-                <img src="${img}" alt="${category}图片" onclick="viewImage('${img}')">
-                <button class="image-delete-btn" onclick="deleteImageFromCategory('${suffix}', ${index})">✕</button>
-              </div>
-            `).join('')
+          ${categoryImageIds.length === 0 ? 
+            '<div class="empty-state-wrapper"><p class="empty-state">暂无插图，点击上方按钮添加</p></div>' :
+            imagesHtml.join('')
           }
         </div>
       </div>
@@ -845,7 +854,7 @@ function renderReflectionsByCategory(reflections, category) {
   `;
 }
 
-function switchReflectionTab(tab, btn) {
+async function switchReflectionTab(tab, btn) {
   document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   
@@ -859,11 +868,12 @@ function switchReflectionTab(tab, btn) {
   const db = getDB();
   const project = db.projects.find(p => p.id === currentProjectId);
   if (project) {
-    $('#reflections-content').innerHTML = renderReflectionsByCategory(project.reflections || [], categoryMap[tab]);
+    const html = await renderReflectionsByCategory(project.reflections || [], categoryMap[tab]);
+    $('#reflections-content').innerHTML = html;
   }
 }
 
-function addReflection(category) {
+async function addReflection(category) {
   const db = getDB();
   const project = db.projects.find(p => p.id === currentProjectId);
   if (!project) return;
@@ -896,11 +906,12 @@ function addReflection(category) {
   showToast('记录添加成功');
   
   // Reload current tab
-  $('#reflections-content').innerHTML = renderReflectionsByCategory(project.reflections, category);
+  const html = await renderReflectionsByCategory(project.reflections, category);
+  $('#reflections-content').innerHTML = html;
   refreshProjectDashboard();
 }
 
-function deleteReflection(index, category) {
+async function deleteReflection(index, category) {
   if (!confirm('确定删除此记录？')) return;
   
   const db = getDB();
@@ -922,7 +933,8 @@ function deleteReflection(index, category) {
   project.updatedAt = new Date().toISOString();
   saveDB(db);
   showToast('已删除');
-  $('#reflections-content').innerHTML = renderReflectionsByCategory(project.reflections, category);
+  const html = await renderReflectionsByCategory(project.reflections, category);
+  $('#reflections-content').innerHTML = html;
   refreshProjectDashboard();
 }
 
@@ -1245,6 +1257,62 @@ function triggerImport() {
 
 // ==================== 图片处理功能 ====================
 
+// IndexedDB 配置
+const DB_NAME = 'aactp_images';
+const DB_VERSION = 1;
+const STORE_NAME = 'images';
+
+// 初始化 IndexedDB
+function initImageDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+  });
+}
+
+// 保存图片到 IndexedDB
+async function saveImageToDB(imageId, imageData) {
+  const db = await initImageDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.put({ id: imageId, data: imageData, timestamp: Date.now() });
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// 从 IndexedDB 获取图片
+async function getImageFromDB(imageId) {
+  const db = await initImageDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get(imageId);
+    request.onsuccess = () => resolve(request.result?.data);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// 从 IndexedDB 删除图片
+async function deleteImageFromDB(imageId) {
+  const db = await initImageDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete(imageId);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
 // 为类别选择图片
 function selectImagesForCategory(categorySuffix) {
   const input = document.getElementById(`image-input-${categorySuffix}`);
@@ -1256,19 +1324,55 @@ function selectImagesForCategory(categorySuffix) {
   }
 }
 
+// 压缩图片
+function compressImage(file, maxWidth = 1024, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      // 如果图片宽度大于最大宽度，等比例缩小
+      if (width > maxWidth) {
+        height = (maxWidth / width) * height;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // 转换为压缩后的 base64
+      const compressedData = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressedData);
+    };
+    img.onerror = reject;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // 处理选中的图片
 async function handleImagesSelected(categorySuffix, input) {
   if (!input.files || input.files.length === 0) return;
   
   const files = Array.from(input.files);
-  const maxFiles = 10; // 最多10张图片
+  const maxFiles = 5; // 最多5张图片
   
   if (files.length > maxFiles) {
     showToast(`最多只能选择${maxFiles}张图片`, true);
     return;
   }
   
-  showToast(`正在处理${files.length}张图片...`);
+  showToast(`正在处理${files.length}张图片，请稍候...`);
   
   const db = getDB();
   const project = db.projects.find(p => p.id === currentProjectId);
@@ -1277,7 +1381,7 @@ async function handleImagesSelected(categorySuffix, input) {
     return;
   }
   
-  // Initialize reflectionImages if not exists
+  // Initialize reflectionImages if not exists (只存储图片ID，不存储数据)
   if (!project.reflectionImages) {
     project.reflectionImages = {};
   }
@@ -1286,6 +1390,8 @@ async function handleImagesSelected(categorySuffix, input) {
   }
   
   try {
+    let successCount = 0;
+    
     for (const file of files) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
@@ -1293,23 +1399,30 @@ async function handleImagesSelected(categorySuffix, input) {
         continue;
       }
       
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        showToast(`图片 ${file.name} 超过5MB限制`, true);
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        showToast(`图片 ${file.name} 超过10MB限制`, true);
         continue;
       }
       
-      // Convert to base64
-      const base64 = await fileToBase64(file);
+      // 生成唯一ID
+      const imageId = `${currentProjectId}_${categorySuffix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Add to project
-      project.reflectionImages[categorySuffix].push(base64);
+      // 压缩图片
+      const compressedData = await compressImage(file);
+      
+      // 保存到 IndexedDB
+      await saveImageToDB(imageId, compressedData);
+      
+      // 只存储ID到 localStorage
+      project.reflectionImages[categorySuffix].push(imageId);
+      successCount++;
     }
     
     project.updatedAt = new Date().toISOString();
     saveDB(db);
     
-    showToast(`成功添加${files.length}张图片`);
+    showToast(`成功添加${successCount}张图片`);
     
     // Reload current tab to show new images
     const categoryMap = {
@@ -1319,35 +1432,50 @@ async function handleImagesSelected(categorySuffix, input) {
       'benchmarks': '标杆案例'
     };
     const category = categoryMap[categorySuffix];
-    $('#reflections-content').innerHTML = renderReflectionsByCategory(project.reflections || [], category);
+    const html = await renderReflectionsByCategory(project.reflections || [], category);
+    $('#reflections-content').innerHTML = html;
     
   } catch (err) {
     console.error('Image processing error:', err);
-    showToast('图片处理失败：' + err.message, true);
+    if (err.name === 'QuotaExceededError') {
+      showToast('存储空间不足，请删除一些图片后再试', true);
+    } else {
+      showToast('图片处理失败：' + err.message, true);
+    }
   }
 }
 
-// 将文件转换为Base64
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+// 加载图片（从 IndexedDB）
+async function loadImage(imageId) {
+  try {
+    return await getImageFromDB(imageId);
+  } catch (err) {
+    console.error('Failed to load image:', err);
+    return null;
+  }
 }
 
 // 从类别中删除图片
-function deleteImageFromCategory(categorySuffix, imageIndex) {
+async function deleteImageFromCategory(categorySuffix, imageIndex, imageId) {
   if (!confirm('确定删除这张图片吗？')) return;
   
   const db = getDB();
   const project = db.projects.find(p => p.id === currentProjectId);
   if (!project || !project.reflectionImages || !project.reflectionImages[categorySuffix]) return;
   
+  // 从数组中删除
   project.reflectionImages[categorySuffix].splice(imageIndex, 1);
   project.updatedAt = new Date().toISOString();
   saveDB(db);
+  
+  // 从 IndexedDB 中删除图片数据
+  if (imageId) {
+    try {
+      await deleteImageFromDB(imageId);
+    } catch (err) {
+      console.error('Failed to delete image from DB:', err);
+    }
+  }
   
   showToast('图片已删除');
   
@@ -1359,7 +1487,8 @@ function deleteImageFromCategory(categorySuffix, imageIndex) {
     'benchmarks': '标杆案例'
   };
   const category = categoryMap[categorySuffix];
-  $('#reflections-content').innerHTML = renderReflectionsByCategory(project.reflections || [], category);
+  const html = await renderReflectionsByCategory(project.reflections || [], category);
+  $('#reflections-content').innerHTML = html;
 }
 
 // 查看大图

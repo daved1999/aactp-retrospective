@@ -1218,6 +1218,20 @@ body {
   background: #e74c3c;
   color: white;
   border: none;
+
+/* 空状态文字容器 */
+.empty-state-wrapper {
+  width: 100%;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.empty-state-wrapper .empty-state {
+  width: 100%;
+  max-width: none;
+  white-space: normal;
+  word-wrap: break-word;
+}
   font-size: 12px;
   cursor: pointer;
   display: flex;
