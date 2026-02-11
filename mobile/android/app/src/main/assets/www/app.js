@@ -1261,21 +1261,21 @@ function triggerImport() {
 // ==================== 图片处理功能 ====================
 
 // IndexedDB 配置
-const DB_NAME = 'aactp_images';
-const DB_VERSION = 1;
-const STORE_NAME = 'images';
+const IMAGE_DB_NAME = 'aactp_images';
+const IMAGE_DB_VERSION = 1;
+const IMAGE_STORE_NAME = 'images';
 
 // 初始化 IndexedDB
 function initImageDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(IMAGE_DB_NAME, IMAGE_DB_VERSION);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-      }
+      if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
+        db.createObjectStore(IMAGE_STORE_NAME, { keyPath: 'id' });
+      };
     };
   });
 }
@@ -1284,8 +1284,8 @@ function initImageDB() {
 async function saveImageToDB(imageId, imageData) {
   const db = await initImageDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
+    const transaction = db.transaction([IMAGE_STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(IMAGE_STORE_NAME);
     const request = store.put({ id: imageId, data: imageData, timestamp: Date.now() });
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
@@ -1296,8 +1296,8 @@ async function saveImageToDB(imageId, imageData) {
 async function getImageFromDB(imageId) {
   const db = await initImageDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
+    const transaction = db.transaction([IMAGE_STORE_NAME], 'readonly');
+    const store = transaction.objectStore(IMAGE_STORE_NAME);
     const request = store.get(imageId);
     request.onsuccess = () => resolve(request.result?.data);
     request.onerror = () => reject(request.error);
@@ -1308,8 +1308,8 @@ async function getImageFromDB(imageId) {
 async function deleteImageFromDB(imageId) {
   const db = await initImageDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
+    const transaction = db.transaction([IMAGE_STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(IMAGE_STORE_NAME);
     const request = store.delete(imageId);
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
