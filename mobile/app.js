@@ -1127,26 +1127,36 @@ function exportData() {
   try {
     const db = getDB();
     const dataStr = JSON.stringify(db, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
     const filename = `zqm-aactp-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.download = filename;
     
-    // For mobile WebView compatibility
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    URL.revokeObjectURL(url);
-    
-    // Show detailed message
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    if (isAndroid) {
-      showToast(`导出成功！文件：${filename} 请查看"下载"文件夹`);
+    // Check if running in Android WebView with native interface
+    if (window.Android && window.Android.exportFile) {
+      // Use native Android file export
+      const result = window.Android.exportFile(filename, dataStr);
+      if (result && result.startsWith('error:')) {
+        showToast('导出失败：' + result.substring(7), true);
+      }
+      // Success message is shown by Android native code
     } else {
-      showToast('数据导出成功，请查看下载文件夹');
+      // Fallback for browser or other platforms
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      URL.revokeObjectURL(url);
+      
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        showToast(`导出成功！文件：${filename} 请查看"下载"文件夹`);
+      } else {
+        showToast('数据导出成功，请查看下载文件夹');
+      }
     }
   } catch (err) {
     console.error('Export error:', err);

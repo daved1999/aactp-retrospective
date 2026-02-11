@@ -1,14 +1,21 @@
 package com.aactp.retrospective
 
 import android.Manifest
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -19,15 +26,22 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import java.io.File
+import java.io.FileWriter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     
     private lateinit var webView: WebView
     private var backPressedTime: Long = 0
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
+    private var downloadReceiver: BroadcastReceiver? = null
     
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
+        private const val DOWNLOAD_DIRECTORY = "复盘画布"
     }
     
     // File picker launcher
@@ -49,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
         setupWebView()
         checkPermissions()
+        setupDownloadReceiver()
         
         // Enable full screen on Android 11+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -88,6 +103,9 @@ class MainActivity : AppCompatActivity() {
             allowContentAccess = true
         }
         
+        // Add JavaScript Interface for file operations
+        webView.addJavascriptInterface(WebAppInterface(this), "Android")
+        
         webView.webViewClient = WebViewClient()
         
         // Custom WebChromeClient to handle file input
@@ -104,8 +122,28 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
+        // Set download listener
+        webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            // This won't be triggered for blob URLs, we handle that via JavaScript interface
+        }
+        
         // Load local HTML file
         webView.loadUrl("file:///android_asset/www/index.html")
+    }
+    
+    private fun setupDownloadReceiver() {
+        downloadReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
+                    val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                    if (downloadId != -1L) {
+                        Toast.makeText(this@MainActivity, "文件已保存到 Download/$DOWNLOAD_DIRECTORY 文件夹", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+        
+        registerReceiver(downloadReceiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
     }
     
     private fun checkPermissions() {
@@ -160,7 +198,55 @@ class MainActivity : AppCompatActivity() {
     }
     
     override fun onDestroy() {
+        downloadReceiver?.let { unregisterReceiver(it) }
         webView.destroy()
         super.onDestroy()
+    }
+    
+    // JavaScript Interface for file operations
+    inner class WebAppInterface(private val context: Context) {
+        
+        @JavascriptInterface
+        fun exportFile(filename: String, content: String): String {
+            return try {
+                // Create directory
+                val downloadDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DOWNLOAD_DIRECTORY)
+                if (!downloadDir.exists()) {
+                    downloadDir.mkdirs()
+                }
+                
+                // Create file
+                val file = File(downloadDir, filename)
+                FileWriter(file).use { writer ->
+                    writer.write(content)
+                }
+                
+                // Show success message on UI thread
+                runOnUiThread {
+                    Toast.makeText(context, "文件已保存到: Download/$DOWNLOAD_DIRECTORY/$filename", Toast.LENGTH_LONG).show()
+                }
+                
+                file.absolutePath
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    Toast.makeText(context, "保存失败: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+                "error: ${e.message}"
+            }
+        }
+        
+        @JavascriptInterface
+        fun getDownloadPath(): String {
+            val downloadDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DOWNLOAD_DIRECTORY)
+            return downloadDir.absolutePath
+        }
+        
+        @JavascriptInterface
+        fun showToast(message: String) {
+            runOnUiThread {
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 }

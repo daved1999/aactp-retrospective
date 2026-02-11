@@ -1124,33 +1124,96 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Data Export/Import for backup
 function exportData() {
-  const db = getDB();
-  const dataStr = JSON.stringify(db, null, 2);
-  const blob = new Blob([dataStr], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `aactp-backup-${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('数据导出成功');
+  try {
+    const db = getDB();
+    const dataStr = JSON.stringify(db, null, 2);
+    const filename = `zqm-aactp-backup-${new Date().toISOString().split('T')[0]}.json`;
+    
+    // Check if running in Android WebView with native interface
+    if (window.Android && window.Android.exportFile) {
+      // Use native Android file export
+      const result = window.Android.exportFile(filename, dataStr);
+      if (result && result.startsWith('error:')) {
+        showToast('导出失败：' + result.substring(7), true);
+      }
+      // Success message is shown by Android native code
+    } else {
+      // Fallback for browser or other platforms
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      URL.revokeObjectURL(url);
+      
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        showToast(`导出成功！文件：${filename} 请查看"下载"文件夹`);
+      } else {
+        showToast('数据导出成功，请查看下载文件夹');
+      }
+    }
+  } catch (err) {
+    console.error('Export error:', err);
+    showToast('导出失败：' + err.message, true);
+  }
 }
 
 function importData(file) {
+  if (!file) {
+    showToast('请选择文件', true);
+    return;
+  }
+  
+  if (!file.name.endsWith('.json')) {
+    showToast('请选择 .json 格式的文件', true);
+    return;
+  }
+  
   const reader = new FileReader();
+  
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
       if (data.projects && Array.isArray(data.projects)) {
-        saveDB(data);
-        showToast('数据导入成功');
-        loadDashboardData();
+        // Confirm before importing
+        if (confirm(`确定要导入 ${data.projects.length} 个项目吗？这将覆盖现有数据。`)) {
+          saveDB(data);
+          showToast('数据导入成功');
+          loadDashboardData();
+          if (currentProjectId) {
+            showDashboard();
+          }
+        }
       } else {
-        showToast('数据格式错误', true);
+        showToast('数据格式错误：缺少项目数据', true);
       }
     } catch (err) {
-      showToast('文件解析失败', true);
+      console.error('Import parse error:', err);
+      showToast('文件解析失败：' + err.message, true);
     }
   };
+  
+  reader.onerror = (e) => {
+    console.error('File read error:', e);
+    showToast('文件读取失败', true);
+  };
+  
   reader.readAsText(file);
+}
+
+// Alternative import method using input element
+function triggerImport() {
+  const input = document.getElementById('import-file');
+  if (input) {
+    input.value = ''; // Reset to allow selecting same file
+    input.click();
+  } else {
+    showToast('导入功能初始化失败', true);
+  }
 }
