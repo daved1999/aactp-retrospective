@@ -237,25 +237,18 @@ class MainActivity : AppCompatActivity() {
                     downloadDir.mkdirs()
                 }
                 
-                // Create file - if exists, add timestamp
-                var file = File(downloadDir, filename)
-                var finalFilename = filename
+                // Generate unique filename with milliseconds timestamp
+                val timestamp = SimpleDateFormat("HHmmss_SSS", Locale.getDefault()).format(Date())
+                val nameWithoutExt = filename.substringBeforeLast(".")
+                val ext = filename.substringAfterLast(".", "")
+                val uniqueFilename = if (ext.isNotEmpty()) "${nameWithoutExt}_${timestamp}.${ext}" else "${nameWithoutExt}_${timestamp}"
                 
-                if (file.exists()) {
-                    val timestamp = SimpleDateFormat("HHmmss", Locale.getDefault()).format(Date())
-                    val nameWithoutExt = filename.substringBeforeLast(".")
-                    val ext = filename.substringAfterLast(".", "")
-                    finalFilename = if (ext.isNotEmpty()) "${nameWithoutExt}_${timestamp}.${ext}" else "${nameWithoutExt}_${timestamp}"
-                    file = File(downloadDir, finalFilename)
+                val file = File(downloadDir, uniqueFilename)
+                
+                // Use FileOutputStream for more reliable writing
+                FileOutputStream(file).use { outputStream ->
+                    outputStream.write(content.toByteArray(Charsets.UTF_8))
                 }
-                
-                // Delete if exists (to avoid File exists error)
-                if (file.exists()) {
-                    file.delete()
-                }
-                
-                // Write file
-                file.writeText(content)
                 
                 // Show success message on UI thread
                 runOnUiThread {
