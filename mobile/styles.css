@@ -160,6 +160,7 @@ body {
   padding: 20px;
   max-width: calc(100% - 260px);
   min-height: 100vh;
+  touch-action: pan-y; /* 允许垂直滚动，但左右滑动手势可以被捕获 */
 }
 
 .view {
@@ -872,6 +873,7 @@ body {
     padding-top: 76px; /* Space for mobile header */
     padding-left: 15px;
     padding-right: 15px;
+    touch-action: pan-y; /* 允许垂直滚动，左右滑动手势可以被捕获 */
   }
   
   /* Adjust toast position for mobile header */

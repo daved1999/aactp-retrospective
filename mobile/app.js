@@ -1157,6 +1157,122 @@ function showReports() {
   showToast('报表功能开发中...');
 }
 
+// ==================== 手势滑动功能 ====================
+
+// 导航菜单项配置（按侧边栏顺序）
+const navMenuItems = [
+  { id: 'dashboard', name: '驾驶舱', action: showDashboard },
+  { id: 'projects', name: '项目列表', action: showProjectList },
+  { id: 'create', name: '新建复盘', action: createNewProject }
+];
+
+// 手势检测变量
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+const minSwipeDistance = 80; // 最小滑动距离（像素）
+const maxSwipeVertical = 100; // 最大垂直偏移（防止误触）
+
+// 获取当前活动视图
+function getCurrentView() {
+  if (!$('#dashboard-view').classList.contains('hidden')) return 'dashboard';
+  if (!$('#project-list-view').classList.contains('hidden')) return 'projects';
+  if (!$('#project-detail-view').classList.contains('hidden')) return 'detail';
+  return 'dashboard';
+}
+
+// 处理左滑（切换到下一个菜单项）
+function handleSwipeLeft() {
+  const currentView = getCurrentView();
+  
+  // 如果在项目详情页，先返回到列表
+  if (currentView === 'detail') {
+    goBack();
+    return;
+  }
+  
+  // 找到当前菜单项索引
+  let currentIndex = navMenuItems.findIndex(item => item.id === currentView);
+  if (currentIndex === -1) currentIndex = 0;
+  
+  // 循环到下一个
+  const nextIndex = (currentIndex + 1) % navMenuItems.length;
+  const nextItem = navMenuItems[nextIndex];
+  
+  console.log(`左滑：从 ${navMenuItems[currentIndex].name} 切换到 ${nextItem.name}`);
+  nextItem.action();
+  showToast(`切换到：${nextItem.name}`);
+}
+
+// 处理右滑（返回上一页）
+function handleSwipeRight() {
+  const currentView = getCurrentView();
+  
+  console.log(`右滑：当前视图 ${currentView}`);
+  
+  // 根据当前视图决定返回操作
+  switch (currentView) {
+    case 'detail':
+      // 在项目详情页，返回到项目列表
+      goBack();
+      showToast('返回');
+      break;
+    case 'projects':
+      // 在项目列表，返回到驾驶舱
+      showDashboard();
+      showToast('返回：驾驶舱');
+      break;
+    case 'dashboard':
+      // 在驾驶舱，可以循环到最后一个或提示已在首页
+      showProjectList();
+      showToast('切换到：项目列表');
+      break;
+  }
+}
+
+// 触摸开始
+function handleTouchStart(e) {
+  touchStartX = e.changedTouches[0].screenX;
+  touchStartY = e.changedTouches[0].screenY;
+}
+
+// 触摸结束
+function handleTouchEnd(e) {
+  touchEndX = e.changedTouches[0].screenX;
+  touchEndY = e.changedTouches[0].screenY;
+  
+  const deltaX = touchEndX - touchStartX;
+  const deltaY = touchEndY - touchStartY;
+  const absDeltaX = Math.abs(deltaX);
+  const absDeltaY = Math.abs(deltaY);
+  
+  // 检查是否为有效滑动手势
+  if (absDeltaX < minSwipeDistance || absDeltaY > maxSwipeVertical) {
+    return; // 滑动距离太短或垂直偏移太大，忽略
+  }
+  
+  // 判断滑动方向
+  if (deltaX < 0) {
+    // 左滑
+    handleSwipeLeft();
+  } else {
+    // 右滑
+    handleSwipeRight();
+  }
+}
+
+// 初始化手势监听
+document.addEventListener('DOMContentLoaded', () => {
+  // 在主内容区域添加手势监听
+  const app = document.getElementById('app');
+  if (app) {
+    app.addEventListener('touchstart', handleTouchStart, { passive: true });
+    app.addEventListener('touchend', handleTouchEnd, { passive: true });
+    console.log('手势功能已启用：左滑切换菜单，右滑返回');
+  }
+});
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   showDashboard();
