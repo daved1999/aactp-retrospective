@@ -1186,7 +1186,7 @@ function getCurrentView() {
   if (!$('#project-list-view').classList.contains('hidden')) return 'projects';
   if (!$('#project-detail-view').classList.contains('hidden')) {
     // 在项目详情页，根据 currentProjectId 判断是查看还是新建
-    // 都映射到 'projects' 菜单项，因为左滑右滑都是循环切换
+    // 如果是新建项目（currentProjectId为null），返回'create'以便手势循环
     return currentProjectId ? 'projects' : 'create';
   }
   return 'dashboard';

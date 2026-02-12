@@ -1460,14 +1460,99 @@ body.sidebar-collapsed .main-content {
 
 /* 横屏模式（landscape）优化 */
 @media screen and (orientation: landscape) and (max-height: 500px) {
-  /* 侧边栏整体优化 - 使用flex布局确保内容垂直居中分布 */
+  /* 侧边栏整体优化 */
   .sidebar {
     width: 200px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding-top: 0;
+    padding-bottom: 10px;
   }
+  
+  /* Logo区域优化 - 只保留"项目复盘画布" */
+  .logo {
+    padding: 15px 10px 10px;
+    margin-bottom: 5px;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+  
+  .logo h2 {
+    display: none; /* 横屏时隐藏ZQM-AACTP标题 */
+  }
+  
+  .logo .app-title {
+    font-size: 15px;
+    margin-top: 0;
+    letter-spacing: 1px;
+    line-height: 1.3;
+  }
+  
+  /* 菜单项优化 - 从顶部开始排列，不居中 */
+  .nav-menu {
+    flex: 0 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 5px 0;
+    display: block;
+    min-height: 0;
+  }
+  
+  .nav-item {
+    padding: 6px 12px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  
+  .nav-icon {
+    font-size: 15px;
+  }
+  
+  /* 底部区域优化 */
+  .nav-footer {
+    padding: 8px;
+    margin-top: auto;
+    flex-shrink: 0;
+  }
+  
+  .nav-footer .footer-title {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+  
+  .nav-footer .footer-buttons {
+    gap: 4px;
+  }
+  
+  .nav-footer .footer-buttons .btn-text {
+    font-size: 10px;
+    padding: 4px 2px;
+  }
+  
+  .nav-footer .footer-hint {
+    font-size: 8px;
+    margin-top: 4px;
+  }
+  
+  /* 主内容区适配 - 默认有侧边栏 */
+  .main-content {
+    margin-left: 200px;
+    max-width: calc(100% - 200px);
+    transition: margin-left 0.3s ease, max-width 0.3s ease;
+  }
+  
+  /* 横屏时侧边栏收起，主内容区占满 */
+  body.sidebar-collapsed .main-content {
+    margin-left: 0;
+    max-width: 100%;
+  }
+  
+  /* 顶部标题栏优化 */
+  .mobile-header-title {
+    font-size: 14px;
+  }
+}
   
   /* Logo区域优化 - 只保留"项目复盘画布" */
   .logo {
