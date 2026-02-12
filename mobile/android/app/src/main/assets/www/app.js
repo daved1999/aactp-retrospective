@@ -1674,37 +1674,179 @@ async function deleteImageFromCategory(categorySuffix, imageIndex, imageId) {
   $('#reflections-content').innerHTML = html;
 }
 
-// 查看大图
+// 查看大图 - 支持双指缩放和拖动
 function viewImage(src) {
   // Create modal
   const modal = document.createElement('div');
+  modal.className = 'image-viewer-modal';
   modal.style.cssText = `
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.9);
+    background: rgba(0,0,0,0.95);
+    z-index: 10000;
+    overflow: hidden;
+    touch-action: none;
+  `;
+  
+  // 创建图片容器（用于缩放和拖动）
+  const container = document.createElement('div');
+  container.className = 'image-viewer-container';
+  container.style.cssText = `
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
-    padding: 20px;
+    transform-origin: center center;
   `;
   
   const img = document.createElement('img');
   img.src = src;
+  img.className = 'image-viewer-img';
   img.style.cssText = `
     max-width: 100%;
-    max-height: 90vh;
+    max-height: 100%;
     object-fit: contain;
+    transition: transform 0.1s ease-out;
+    user-select: none;
+    -webkit-user-drag: none;
   `;
   
-  modal.appendChild(img);
+  // 添加提示文字
+  const hint = document.createElement('div');
+  hint.style.cssText = `
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 14px;
+    opacity: 0.7;
+    pointer-events: none;
+    background: rgba(0,0,0,0.5);
+    padding: 8px 16px;
+    border-radius: 20px;
+  `;
+  hint.textContent = '双指缩放 • 拖动查看 • 点击关闭';
+  
+  container.appendChild(img);
+  modal.appendChild(container);
+  modal.appendChild(hint);
   document.body.appendChild(modal);
   
-  // Close on click
-  modal.onclick = () => {
-    document.body.removeChild(modal);
-  };
+  // 缩放和拖动状态
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let initialDistance = 0;
+  let initialScale = 1;
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+  let lastX = 0;
+  let lastY = 0;
+  
+  // 更新变换
+  function updateTransform() {
+    img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+  }
+  
+  // 获取双指距离
+  function getDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  
+  // 触摸开始
+  function handleTouchStart(e) {
+    e.preventDefault();
+    
+    if (e.touches.length === 1) {
+      // 单指拖动
+      isDragging = true;
+      startX = e.touches[0].clientX - translateX;
+      startY = e.touches[0].clientY - translateY;
+    } else if (e.touches.length === 2) {
+      // 双指缩放
+      isDragging = false;
+      initialDistance = getDistance(e.touches[0], e.touches[1]);
+      initialScale = scale;
+    }
+  }
+  
+  // 触摸移动
+  function handleTouchMove(e) {
+    e.preventDefault();
+    
+    if (e.touches.length === 1 && isDragging && scale > 1) {
+      // 单指拖动（仅在放大时）
+      translateX = e.touches[0].clientX - startX;
+      translateY = e.touches[0].clientY - startY;
+      updateTransform();
+    } else if (e.touches.length === 2) {
+      // 双指缩放
+      const currentDistance = getDistance(e.touches[0], e.touches[1]);
+      const newScale = (currentDistance / initialDistance) * initialScale;
+      scale = Math.min(Math.max(newScale, 0.5), 4); // 限制缩放范围 0.5x - 4x
+      updateTransform();
+    }
+  }
+  
+  // 触摸结束
+  function handleTouchEnd(e) {
+    if (e.touches.length === 0) {
+      isDragging = false;
+    } else if (e.touches.length === 1) {
+      // 从双指变为单指，重新初始化拖动
+      isDragging = true;
+      startX = e.touches[0].clientX - translateX;
+      startY = e.touches[0].clientY - translateY;
+    }
+  }
+  
+  // 双击重置
+  let lastTapTime = 0;
+  function handleDoubleTap(e) {
+    const currentTime = new Date().getTime();
+    if (currentTime - lastTapTime < 300) {
+      // 双击
+      e.stopPropagation();
+      if (scale !== 1) {
+        // 重置
+        scale = 1;
+        translateX = 0;
+        translateY = 0;
+      } else {
+        // 放大到 2x
+        scale = 2;
+      }
+      updateTransform();
+    }
+    lastTapTime = currentTime;
+  }
+  
+  // 绑定事件
+  modal.addEventListener('touchstart', handleTouchStart, { passive: false });
+  modal.addEventListener('touchmove', handleTouchMove, { passive: false });
+  modal.addEventListener('touchend', handleTouchEnd, { passive: false });
+  modal.addEventListener('click', handleDoubleTap);
+  
+  // 鼠标滚轮缩放（桌面端支持）
+  modal.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    scale = Math.min(Math.max(scale * delta, 0.5), 4);
+    updateTransform();
+  }, { passive: false });
+  
+  // 关闭查看器（点击背景）
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target === container) {
+      document.body.removeChild(modal);
+    }
+  });
 }
