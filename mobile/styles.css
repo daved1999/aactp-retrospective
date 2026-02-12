@@ -968,6 +968,16 @@ body.sidebar-collapsed .main-content {
     max-width: 100% !important;
   }
   
+  /* 移动端侧边栏菜单从顶部排列 */
+  .sidebar .nav-menu {
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 0 auto !important;
+    min-height: auto !important;
+  }
+  
   /* Adjust toast position for mobile header */
   .toast {
     top: 76px;
