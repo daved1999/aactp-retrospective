@@ -111,6 +111,7 @@ body {
   font-size: 22px;
   margin-bottom: 8px;
   text-align: center;
+  display: none; /* 竖屏时隐藏ZQM-AACTP标题 */
 }
 
 .logo p {
@@ -123,7 +124,7 @@ body {
   font-size: 20px;
   font-weight: bold;
   text-align: center;
-  margin-top: 5px;
+  margin-top: 0;
   letter-spacing: 2px;
 }
 
