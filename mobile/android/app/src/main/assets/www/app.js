@@ -1174,23 +1174,21 @@ let touchEndY = 0;
 const minSwipeDistance = 80; // 最小滑动距离（像素）
 const maxSwipeVertical = 100; // 最大垂直偏移（防止误触）
 
-// 获取当前活动视图
+// 获取当前活动视图（映射到菜单项）
 function getCurrentView() {
   if (!$('#dashboard-view').classList.contains('hidden')) return 'dashboard';
   if (!$('#project-list-view').classList.contains('hidden')) return 'projects';
-  if (!$('#project-detail-view').classList.contains('hidden')) return 'detail';
+  if (!$('#project-detail-view').classList.contains('hidden')) {
+    // 在项目详情页，根据 currentProjectId 判断是查看还是新建
+    // 都映射到 'projects' 菜单项，因为左滑右滑都是循环切换
+    return currentProjectId ? 'projects' : 'create';
+  }
   return 'dashboard';
 }
 
-// 处理左滑（切换到下一个菜单项）
-function handleSwipeLeft() {
+// 切换到下一个菜单项（循环）
+function cycleToNextMenu() {
   const currentView = getCurrentView();
-  
-  // 如果在项目详情页，先返回到列表
-  if (currentView === 'detail') {
-    goBack();
-    return;
-  }
   
   // 找到当前菜单项索引
   let currentIndex = navMenuItems.findIndex(item => item.id === currentView);
@@ -1200,35 +1198,36 @@ function handleSwipeLeft() {
   const nextIndex = (currentIndex + 1) % navMenuItems.length;
   const nextItem = navMenuItems[nextIndex];
   
-  console.log(`左滑：从 ${navMenuItems[currentIndex].name} 切换到 ${nextItem.name}`);
+  console.log(`切换到：从 ${navMenuItems[currentIndex].name} 到 ${nextItem.name}`);
   nextItem.action();
   showToast(`切换到：${nextItem.name}`);
 }
 
-// 处理右滑（返回上一页）
-function handleSwipeRight() {
+// 切换到上一个菜单项（循环）
+function cycleToPrevMenu() {
   const currentView = getCurrentView();
   
-  console.log(`右滑：当前视图 ${currentView}`);
+  // 找到当前菜单项索引
+  let currentIndex = navMenuItems.findIndex(item => item.id === currentView);
+  if (currentIndex === -1) currentIndex = 0;
   
-  // 根据当前视图决定返回操作
-  switch (currentView) {
-    case 'detail':
-      // 在项目详情页，返回到项目列表
-      goBack();
-      showToast('返回');
-      break;
-    case 'projects':
-      // 在项目列表，返回到驾驶舱
-      showDashboard();
-      showToast('返回：驾驶舱');
-      break;
-    case 'dashboard':
-      // 在驾驶舱，可以循环到最后一个或提示已在首页
-      showProjectList();
-      showToast('切换到：项目列表');
-      break;
-  }
+  // 循环到上一个（数组长度减1再取模）
+  const prevIndex = (currentIndex - 1 + navMenuItems.length) % navMenuItems.length;
+  const prevItem = navMenuItems[prevIndex];
+  
+  console.log(`切换到：从 ${navMenuItems[currentIndex].name} 到 ${prevItem.name}`);
+  prevItem.action();
+  showToast(`切换到：${prevItem.name}`);
+}
+
+// 处理左滑（切换到下一个菜单项）
+function handleSwipeLeft() {
+  cycleToNextMenu();
+}
+
+// 处理右滑（切换到上一个菜单项）- 现在和左滑功能相同，都是循环切换
+function handleSwipeRight() {
+  cycleToPrevMenu();
 }
 
 // 触摸开始
