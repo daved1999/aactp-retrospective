@@ -126,6 +126,9 @@ body {
   text-align: center;
   margin-top: 0;
   letter-spacing: 2px;
+  color: white;
+  display: block;
+  padding: 10px 0;
 }
 
 .nav-menu {
