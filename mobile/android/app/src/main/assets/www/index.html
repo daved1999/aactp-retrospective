@@ -28,7 +28,7 @@
     <nav class="sidebar">
       <div class="logo">
         <h2>ZQM-AACTP</h2>
-        <p>项目复盘画布</p>
+        <p class="app-title">项目复盘画布</p>
       </div>
       <ul class="nav-menu">
         <li class="nav-item active" onclick="showDashboard(); closeSidebar();">
@@ -39,15 +39,29 @@
           <span class="nav-icon">📁</span>
           <span>项目列表</span>
         </li>
-        <li class="nav-item" onclick="createNewProject(); closeSidebar();">
-          <span class="nav-icon">➕</span>
+        <li class="nav-item nav-item-create" onclick="createNewProject(); closeSidebar();">
+          <span class="nav-icon nav-icon-create">➕</span>
           <span>新建复盘</span>
+        </li>
+        <li class="nav-item" onclick="window.location.href='help.html';">
+          <span class="nav-icon">❓</span>
+          <span>使用帮助</span>
         </li>
       </ul>
       <div class="nav-footer">
-        <button class="btn-text" onclick="exportData()" style="color: white; opacity: 0.8;">📤 导出数据</button>
-        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(this.files[0])">
-        <button class="btn-text" onclick="$('#import-file').click()" style="color: white; opacity: 0.8; margin-top: 10px;">📥 导入数据</button>
+        <div class="footer-title">数据备份</div>
+        <div class="footer-buttons">
+          <button class="btn-text btn-export" onclick="exportData()">
+            📤 导出
+          </button>
+          <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(this.files[0])">
+          <button class="btn-text btn-import" onclick="triggerImport()">
+            📥 导入
+          </button>
+        </div>
+        <div class="footer-hint">
+          导出文件保存在下载文件夹
+        </div>
       </div>
     </nav>
 
@@ -228,7 +242,7 @@
           </div>
           <div class="form-grid">
             <div class="form-group">
-              <label>组织名称</label>
+<label>组织名称</label>
               <input type="text" id="project-enterprise" placeholder="输入组织名称">
             </div>
             <div class="form-group">

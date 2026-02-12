@@ -46,6 +46,7 @@ function toggleSidebar() {
     sidebar.classList.add('active');
     overlay.classList.add('active');
     document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    document.body.classList.remove('sidebar-collapsed'); // 桌面端展开侧边栏
   }
 }
 
@@ -56,6 +57,11 @@ function closeSidebar() {
   sidebar.classList.remove('active');
   overlay.classList.remove('active');
   document.body.style.overflow = ''; // Restore scrolling
+  
+  // 桌面端（宽度>767px）隐藏侧边栏时，添加collapsed类使主内容区居中
+  if (window.innerWidth > 767) {
+    document.body.classList.add('sidebar-collapsed');
+  }
 }
 
 // Close sidebar when pressing Escape key
@@ -1185,7 +1191,7 @@ function getCurrentView() {
   if (!$('#project-list-view').classList.contains('hidden')) return 'projects';
   if (!$('#project-detail-view').classList.contains('hidden')) {
     // 在项目详情页，根据 currentProjectId 判断是查看还是新建
-    // 都映射到 'projects' 菜单项，因为左滑右滑都是循环切换
+    // 如果是新建项目（currentProjectId为null），返回'create'以便手势循环
     return currentProjectId ? 'projects' : 'create';
   }
   return 'dashboard';
@@ -1280,6 +1286,24 @@ document.addEventListener('DOMContentLoaded', () => {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   showDashboard();
+  
+  // 初始化侧边栏状态（桌面端默认展开）
+  if (window.innerWidth > 767) {
+    document.body.classList.remove('sidebar-collapsed');
+  } else {
+    document.body.classList.add('sidebar-collapsed');
+  }
+});
+
+// 窗口大小改变时调整侧边栏状态
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 767) {
+    // 桌面端默认展开
+    document.body.classList.remove('sidebar-collapsed');
+  } else {
+    // 移动端默认收起
+    document.body.classList.add('sidebar-collapsed');
+  }
 });
 
 // Data Export/Import for backup
