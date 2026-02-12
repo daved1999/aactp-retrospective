@@ -256,7 +256,7 @@ class MainActivity : AppCompatActivity() {
                 val ext = filename.substringAfterLast(".", "")
                 val uniqueFilename = if (ext.isNotEmpty()) "${nameWithoutExt}_${timestamp}.${ext}" else "${nameWithoutExt}_${timestamp}"
                 
-                val filePath: String
+                lateinit var filePath: String
                 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     // Android 10+ 使用 MediaStore 保存到 Download 目录
@@ -267,12 +267,14 @@ class MainActivity : AppCompatActivity() {
                     }
                     
                     val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                    uri?.let {
-                        context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                    if (uri != null) {
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                             outputStream.write(content.toByteArray(Charsets.UTF_8))
                         }
-                        filePath = it.toString()
-                    } ?: throw Exception("无法创建文件")
+                        filePath = uri.toString()
+                    } else {
+                        throw Exception("无法创建文件")
+                    }
                 } else {
                     // Android 9 及以下使用传统方式
                     val downloadDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DOWNLOAD_DIRECTORY)
