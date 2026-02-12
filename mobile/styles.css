@@ -235,6 +235,13 @@ body {
   max-width: calc(100% - 260px);
   min-height: 100vh;
   touch-action: pan-y; /* 允许垂直滚动，但左右滑动手势可以被捕获 */
+  transition: margin-left 0.3s ease, max-width 0.3s ease;
+}
+
+/* 当侧边栏隐藏时，主内容区占满全宽 */
+body.sidebar-collapsed .main-content {
+  margin-left: 0;
+  max-width: 100%;
 }
 
 .view {
