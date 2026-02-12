@@ -58,10 +58,8 @@ function closeSidebar() {
   overlay.classList.remove('active');
   document.body.style.overflow = ''; // Restore scrolling
   
-  // 桌面端（宽度>767px）隐藏侧边栏时，添加collapsed类使主内容区居中
-  if (window.innerWidth > 767) {
-    document.body.classList.add('sidebar-collapsed');
-  }
+  // 所有设备隐藏侧边栏时，都添加collapsed类使主内容区回到原位
+  document.body.classList.add('sidebar-collapsed');
 }
 
 // Close sidebar when pressing Escape key

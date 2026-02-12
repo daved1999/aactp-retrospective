@@ -953,12 +953,19 @@ body.sidebar-collapsed .main-content {
   
   /* Main content full width on mobile */
   .main-content {
-    margin-left: 0;
-    max-width: 100%;
+    margin-left: 0 !important;
+    max-width: 100% !important;
     padding-top: 76px; /* Space for mobile header */
     padding-left: 15px;
     padding-right: 15px;
     touch-action: pan-y; /* 允许垂直滚动，左右滑动手势可以被捕获 */
+    transition: margin-left 0.3s ease, max-width 0.3s ease;
+  }
+  
+  /* 移动端侧边栏收起时，主内容区占满全宽 */
+  body.sidebar-collapsed .main-content {
+    margin-left: 0 !important;
+    max-width: 100% !important;
   }
   
   /* Adjust toast position for mobile header */
