@@ -101,10 +101,11 @@ body {
 }
 
 .logo {
-  padding: 10px 20px 30px;
+  padding: 40px 20px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   text-align: center;
+  margin-top: 20px;
 }
 
 .logo h2 {
@@ -124,7 +125,7 @@ body {
   font-size: 20px;
   font-weight: bold;
   text-align: center;
-  margin-top: 0;
+  margin-top: 15px;
   letter-spacing: 2px;
   color: white;
   display: block;
@@ -1459,8 +1460,9 @@ body {
   
   /* Logo区域优化 - 只保留"项目复盘画布" */
   .logo {
-    padding: 8px 10px 12px;
+    padding: 30px 10px 12px;
     margin-bottom: 8px;
+    margin-top: 10px;
   }
   
   .logo h2 {
@@ -1469,7 +1471,7 @@ body {
   
   .logo .app-title {
     font-size: 16px;
-    margin-top: 0;
+    margin-top: 10px;
     letter-spacing: 1px;
   }
   
