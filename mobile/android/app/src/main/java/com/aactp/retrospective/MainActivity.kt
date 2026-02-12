@@ -3,6 +3,7 @@ package com.aactp.retrospective
 import android.Manifest
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -12,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -28,6 +30,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.FileOutputStream
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -169,19 +172,35 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun checkPermissions() {
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-            val permissions = arrayOf(
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            )
-            
-            val needPermissions = permissions.filter {
-                ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        val permissions = when {
+            // Android 13+ (API 33+) - 使用新的媒体权限
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                arrayOf(
+                    Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.READ_MEDIA_VIDEO
+                )
             }
-            
-            if (needPermissions.isNotEmpty()) {
-                ActivityCompat.requestPermissions(this, needPermissions.toTypedArray(), PERMISSION_REQUEST_CODE)
+            // Android 10-12 (API 29-32) - 使用传统存储权限
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                arrayOf(
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                )
             }
+            // Android 9 及以下 - 使用读写权限
+            else -> {
+                arrayOf(
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                )
+            }
+        }
+        
+        val needPermissions = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        
+        if (needPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, needPermissions.toTypedArray(), PERMISSION_REQUEST_CODE)
         }
     }
     
@@ -231,31 +250,49 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun exportFile(filename: String, content: String): String {
             return try {
-                // Create directory
-                val downloadDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DOWNLOAD_DIRECTORY)
-                if (!downloadDir.exists()) {
-                    downloadDir.mkdirs()
-                }
-                
                 // Generate unique filename with milliseconds timestamp
                 val timestamp = SimpleDateFormat("HHmmss_SSS", Locale.getDefault()).format(Date())
                 val nameWithoutExt = filename.substringBeforeLast(".")
                 val ext = filename.substringAfterLast(".", "")
                 val uniqueFilename = if (ext.isNotEmpty()) "${nameWithoutExt}_${timestamp}.${ext}" else "${nameWithoutExt}_${timestamp}"
                 
-                val file = File(downloadDir, uniqueFilename)
+                val filePath: String
                 
-                // Use FileOutputStream for more reliable writing
-                FileOutputStream(file).use { outputStream ->
-                    outputStream.write(content.toByteArray(Charsets.UTF_8))
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // Android 10+ 使用 MediaStore 保存到 Download 目录
+                    val contentValues = ContentValues().apply {
+                        put(MediaStore.Downloads.DISPLAY_NAME, uniqueFilename)
+                        put(MediaStore.Downloads.MIME_TYPE, "application/json")
+                        put(MediaStore.Downloads.RELATIVE_PATH, "Download/$DOWNLOAD_DIRECTORY")
+                    }
+                    
+                    val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                    uri?.let {
+                        context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                            outputStream.write(content.toByteArray(Charsets.UTF_8))
+                        }
+                        filePath = it.toString()
+                    } ?: throw Exception("无法创建文件")
+                } else {
+                    // Android 9 及以下使用传统方式
+                    val downloadDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DOWNLOAD_DIRECTORY)
+                    if (!downloadDir.exists()) {
+                        downloadDir.mkdirs()
+                    }
+                    
+                    val file = File(downloadDir, uniqueFilename)
+                    FileOutputStream(file).use { outputStream ->
+                        outputStream.write(content.toByteArray(Charsets.UTF_8))
+                    }
+                    filePath = file.absolutePath
                 }
                 
                 // Show success message on UI thread
                 runOnUiThread {
-                    Toast.makeText(context, "文件已保存到: Download/$DOWNLOAD_DIRECTORY/${file.name}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "文件已保存到: Download/$DOWNLOAD_DIRECTORY/$uniqueFilename", Toast.LENGTH_LONG).show()
                 }
                 
-                file.absolutePath
+                filePath
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
@@ -267,8 +304,12 @@ class MainActivity : AppCompatActivity() {
         
         @JavascriptInterface
         fun getDownloadPath(): String {
-            val downloadDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DOWNLOAD_DIRECTORY)
-            return downloadDir.absolutePath
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                "Download/$DOWNLOAD_DIRECTORY"
+            } else {
+                val downloadDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DOWNLOAD_DIRECTORY)
+                downloadDir.absolutePath
+            }
         }
         
         @JavascriptInterface
