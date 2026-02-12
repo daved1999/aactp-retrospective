@@ -114,8 +114,16 @@ class MainActivity : AppCompatActivity() {
             builtInZoomControls = false
             displayZoomControls = false
             mediaPlaybackRequiresUserGesture = false
-            allowFileAccess = true
-            allowContentAccess = true
+            
+            // Android 10+ (API 29+) 这些设置需要特殊处理
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+ 使用新的 API
+                allowFileAccess = false
+                allowContentAccess = true
+            } else {
+                allowFileAccess = true
+                allowContentAccess = true
+            }
         }
         
         // Add JavaScript Interface for file operations
@@ -147,9 +155,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
-        // Set download listener
-        webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
-            // This won't be triggered for blob URLs, we handle that via JavaScript interface
+        // Set download listener - disabled for Android 10+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+                // This won't be triggered for blob URLs, we handle that via JavaScript interface
+            }
         }
         
         // Load local HTML file
@@ -172,12 +182,18 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun checkPermissions() {
+        // Android 14+ (API 34+) 需要特殊处理
         val permissions = when {
-            // Android 13+ (API 33+) - 使用新的媒体权限
+            // Android 14+ - 根据需要申请权限
+            Build.VERSION.SDK_INT >= 34 -> {
+                // Android 14+ 对于 WebView 本地存储不需要特殊权限
+                // 导出功能使用 MediaStore，导入功能使用文件选择器
+                emptyArray()
+            }
+            // Android 13 (API 33) - 使用新的媒体权限
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
                 arrayOf(
-                    Manifest.permission.READ_MEDIA_IMAGES,
-                    Manifest.permission.READ_MEDIA_VIDEO
+                    Manifest.permission.READ_MEDIA_IMAGES
                 )
             }
             // Android 10-12 (API 29-32) - 使用传统存储权限
@@ -195,12 +211,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
-        val needPermissions = permissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-        
-        if (needPermissions.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, needPermissions.toTypedArray(), PERMISSION_REQUEST_CODE)
+        if (permissions.isNotEmpty()) {
+            val needPermissions = permissions.filter {
+                ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+            }
+            
+            if (needPermissions.isNotEmpty()) {
+                ActivityCompat.requestPermissions(this, needPermissions.toTypedArray(), PERMISSION_REQUEST_CODE)
+            }
         }
     }
     
@@ -258,35 +276,62 @@ class MainActivity : AppCompatActivity() {
                 
                 lateinit var filePath: String
                 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    // Android 10+ 使用 MediaStore 保存到 Download 目录
-                    val contentValues = ContentValues().apply {
-                        put(MediaStore.Downloads.DISPLAY_NAME, uniqueFilename)
-                        put(MediaStore.Downloads.MIME_TYPE, "application/json")
-                        put(MediaStore.Downloads.RELATIVE_PATH, "Download/$DOWNLOAD_DIRECTORY")
+                when {
+                    // Android 14+ (API 34+) - 使用 MediaStore 并处理新限制
+                    Build.VERSION.SDK_INT >= 34 -> {
+                        val contentValues = ContentValues().apply {
+                            put(MediaStore.Downloads.DISPLAY_NAME, uniqueFilename)
+                            put(MediaStore.Downloads.MIME_TYPE, "application/json")
+                            put(MediaStore.Downloads.RELATIVE_PATH, "Download/$DOWNLOAD_DIRECTORY")
+                            // Android 14+ 需要设置 IS_PENDING
+                            put(MediaStore.Downloads.IS_PENDING, 1)
+                        }
+                        
+                        val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                        if (uri != null) {
+                            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                                outputStream.write(content.toByteArray(Charsets.UTF_8))
+                            }
+                            // 清除 IS_PENDING 标记
+                            contentValues.clear()
+                            contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+                            context.contentResolver.update(uri, contentValues, null, null)
+                            filePath = uri.toString()
+                        } else {
+                            throw Exception("无法创建文件")
+                        }
                     }
-                    
-                    val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                    if (uri != null) {
-                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    // Android 10+ (API 29+) - 使用 MediaStore
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                        val contentValues = ContentValues().apply {
+                            put(MediaStore.Downloads.DISPLAY_NAME, uniqueFilename)
+                            put(MediaStore.Downloads.MIME_TYPE, "application/json")
+                            put(MediaStore.Downloads.RELATIVE_PATH, "Download/$DOWNLOAD_DIRECTORY")
+                        }
+                        
+                        val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                        if (uri != null) {
+                            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                                outputStream.write(content.toByteArray(Charsets.UTF_8))
+                            }
+                            filePath = uri.toString()
+                        } else {
+                            throw Exception("无法创建文件")
+                        }
+                    }
+                    // Android 9 及以下 - 使用传统方式
+                    else -> {
+                        val downloadDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DOWNLOAD_DIRECTORY)
+                        if (!downloadDir.exists()) {
+                            downloadDir.mkdirs()
+                        }
+                        
+                        val file = File(downloadDir, uniqueFilename)
+                        FileOutputStream(file).use { outputStream ->
                             outputStream.write(content.toByteArray(Charsets.UTF_8))
                         }
-                        filePath = uri.toString()
-                    } else {
-                        throw Exception("无法创建文件")
+                        filePath = file.absolutePath
                     }
-                } else {
-                    // Android 9 及以下使用传统方式
-                    val downloadDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), DOWNLOAD_DIRECTORY)
-                    if (!downloadDir.exists()) {
-                        downloadDir.mkdirs()
-                    }
-                    
-                    val file = File(downloadDir, uniqueFilename)
-                    FileOutputStream(file).use { outputStream ->
-                        outputStream.write(content.toByteArray(Charsets.UTF_8))
-                    }
-                    filePath = file.absolutePath
                 }
                 
                 // Show success message on UI thread

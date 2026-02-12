@@ -28,8 +28,13 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AACTP"
-        android:usesCleartextTraffic="false"
-        android:requestLegacyExternalStorage="true">
+        android:usesCleartextTraffic="true"
+        android:enableOnBackInvokedCallback="true">
+        
+        <!-- Android 14+ 需要的配置 -->
+        <property
+            android:name="android.window.PROPERTY_ACTIVITY_EMBEDDING_ALLOW_SYSTEM_OVERRIDE"
+            android:value="true" />
         
         <activity
             android:name=".MainActivity"
