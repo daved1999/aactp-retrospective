@@ -1715,6 +1715,33 @@ function viewImage(src) {
     -webkit-user-drag: none;
   `;
   
+  // 添加关闭按钮
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = `
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    font-size: 24px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  `;
+  closeBtn.onclick = (e) => {
+    e.stopPropagation();
+    document.body.removeChild(modal);
+  };
+  
   // 添加提示文字
   const hint = document.createElement('div');
   hint.style.cssText = `
@@ -1734,6 +1761,7 @@ function viewImage(src) {
   
   container.appendChild(img);
   modal.appendChild(container);
+  modal.appendChild(closeBtn);
   modal.appendChild(hint);
   document.body.appendChild(modal);
   
@@ -1808,32 +1836,59 @@ function viewImage(src) {
     }
   }
   
-  // 双击重置
+  // 双击重置和点击关闭处理
   let lastTapTime = 0;
-  function handleDoubleTap(e) {
+  let touchStartTime = 0;
+  let hasMoved = false;
+  
+  function handleClick(e) {
     const currentTime = new Date().getTime();
-    if (currentTime - lastTapTime < 300) {
-      // 双击
+    const timeDiff = currentTime - lastTapTime;
+    
+    // 检查点击目标
+    const clickedElement = e.target;
+    const isBackground = clickedElement === modal || clickedElement === container;
+    const isImage = clickedElement === img;
+    
+    if (timeDiff < 300 && timeDiff > 0) {
+      // 双击 - 缩放
+      e.preventDefault();
       e.stopPropagation();
       if (scale !== 1) {
-        // 重置
         scale = 1;
         translateX = 0;
         translateY = 0;
       } else {
-        // 放大到 2x
         scale = 2;
       }
       updateTransform();
+    } else if (isBackground && !hasMoved) {
+      // 单击背景且没有拖动 - 关闭
+      document.body.removeChild(modal);
     }
+    
     lastTapTime = currentTime;
+    hasMoved = false;
+  }
+  
+  // 改进的触摸开始处理
+  function handleTouchStartEnhanced(e) {
+    touchStartTime = new Date().getTime();
+    hasMoved = false;
+    handleTouchStart(e);
+  }
+  
+  // 改进的触摸移动处理
+  function handleTouchMoveEnhanced(e) {
+    hasMoved = true;
+    handleTouchMove(e);
   }
   
   // 绑定事件
-  modal.addEventListener('touchstart', handleTouchStart, { passive: false });
-  modal.addEventListener('touchmove', handleTouchMove, { passive: false });
+  modal.addEventListener('touchstart', handleTouchStartEnhanced, { passive: false });
+  modal.addEventListener('touchmove', handleTouchMoveEnhanced, { passive: false });
   modal.addEventListener('touchend', handleTouchEnd, { passive: false });
-  modal.addEventListener('click', handleDoubleTap);
+  modal.addEventListener('click', handleClick);
   
   // 鼠标滚轮缩放（桌面端支持）
   modal.addEventListener('wheel', (e) => {
@@ -1842,11 +1897,4 @@ function viewImage(src) {
     scale = Math.min(Math.max(scale * delta, 0.5), 4);
     updateTransform();
   }, { passive: false });
-  
-  // 关闭查看器（点击背景）
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal || e.target === container) {
-      document.body.removeChild(modal);
-    }
-  });
 }
