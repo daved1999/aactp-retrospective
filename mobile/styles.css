@@ -157,6 +157,26 @@ body {
   font-size: 20px;
 }
 
+/* 新建复盘按钮高亮样式 */
+.nav-icon-create {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: white;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.4);
+}
+
+.nav-item-create:hover .nav-icon-create,
+.nav-item-create:active .nav-icon-create {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.6);
+}
+
 .nav-footer {
   margin-top: auto;
   padding: 15px;
