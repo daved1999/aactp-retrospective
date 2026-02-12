@@ -1278,10 +1278,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Data Export/Import for backup
-function exportData() {
+async function exportData() {
   try {
+    showToast('正在导出数据，请稍候...');
+    
     const db = getDB();
-    const dataStr = JSON.stringify(db, null, 2);
+    
+    // 导出项目数据
+    const exportData = {
+      ...db,
+      exportDate: new Date().toISOString(),
+      version: '2.0'
+    };
+    
+    // 尝试导出图片数据
+    try {
+      const images = await getAllImagesFromDB();
+      exportData.images = images;
+      console.log(`导出 ${images.length} 张图片`);
+    } catch (err) {
+      console.warn('导出图片失败:', err);
+      exportData.images = [];
+    }
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
     const filename = `zqm-aactp-backup-${new Date().toISOString().split('T')[0]}.json`;
     
     // Check if running in Android WebView with native interface
@@ -1290,8 +1310,9 @@ function exportData() {
       const result = window.Android.exportFile(filename, dataStr);
       if (result && result.startsWith('error:')) {
         showToast('导出失败：' + result.substring(7), true);
+      } else {
+        showToast(`导出成功！包含 ${exportData.images?.length || 0} 张图片`);
       }
-      // Success message is shown by Android native code
     } else {
       // Fallback for browser or other platforms
       const blob = new Blob([dataStr], { type: 'application/json' });
@@ -1308,9 +1329,9 @@ function exportData() {
       
       const isAndroid = /Android/i.test(navigator.userAgent);
       if (isAndroid) {
-        showToast(`导出成功！文件：${filename} 请查看"下载"文件夹`);
+        showToast(`导出成功！包含 ${exportData.images?.length || 0} 张图片，文件：${filename}`);
       } else {
-        showToast('数据导出成功，请查看下载文件夹');
+        showToast(`数据导出成功，包含 ${exportData.images?.length || 0} 张图片`);
       }
     }
   } catch (err) {
@@ -1319,7 +1340,7 @@ function exportData() {
   }
 }
 
-function importData(file) {
+async function importData(file) {
   if (!file) {
     showToast('请选择文件', true);
     return;
@@ -1330,16 +1351,32 @@ function importData(file) {
     return;
   }
   
+  showToast('正在导入数据，请稍候...');
+  
   const reader = new FileReader();
   
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target.result);
       if (data.projects && Array.isArray(data.projects)) {
         // Confirm before importing
         if (confirm(`确定要导入 ${data.projects.length} 个项目吗？这将覆盖现有数据。`)) {
+          // 导入项目数据
           saveDB(data);
-          showToast('数据导入成功');
+          
+          // 导入图片数据
+          if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+            try {
+              await saveAllImagesToDB(data.images);
+              showToast(`导入成功！包含 ${data.images.length} 张图片`);
+            } catch (err) {
+              console.error('导入图片失败:', err);
+              showToast('项目数据导入成功，但图片导入失败', true);
+            }
+          } else {
+            showToast('数据导入成功（不包含图片）');
+          }
+          
           loadDashboardData();
           if (currentProjectId) {
             showDashboard();
@@ -1428,6 +1465,34 @@ async function deleteImageFromDB(imageId) {
     const request = store.delete(imageId);
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
+  });
+}
+
+// 从 IndexedDB 获取所有图片（用于导出）
+async function getAllImagesFromDB() {
+  const db = await initImageDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([IMAGE_STORE_NAME], 'readonly');
+    const store = transaction.objectStore(IMAGE_STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// 批量保存图片到 IndexedDB（用于导入）
+async function saveAllImagesToDB(images) {
+  const db = await initImageDB();
+  const transaction = db.transaction([IMAGE_STORE_NAME], 'readwrite');
+  const store = transaction.objectStore(IMAGE_STORE_NAME);
+  
+  for (const image of images) {
+    store.put(image);
+  }
+  
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
   });
 }
 
