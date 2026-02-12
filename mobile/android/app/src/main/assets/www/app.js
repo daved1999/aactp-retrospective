@@ -105,6 +105,10 @@ function updateActiveNav(view) {
     document.querySelector('.nav-item:nth-child(1)').classList.add('active');
   } else if (view === 'projects') {
     document.querySelector('.nav-item:nth-child(2)').classList.add('active');
+  } else if (view === 'create') {
+    document.querySelector('.nav-item:nth-child(3)').classList.add('active');
+  } else if (view === 'help') {
+    document.querySelector('.nav-item:nth-child(4)').classList.add('active');
   }
 }
 
@@ -1147,6 +1151,7 @@ function formatDateTime(dateString) {
 
 function createNewProject() {
   showProjectDetail(null);
+  updateActiveNav('create');
 }
 
 function goBack() {
