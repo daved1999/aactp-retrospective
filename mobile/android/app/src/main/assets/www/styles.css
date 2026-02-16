@@ -955,7 +955,7 @@ body.sidebar-collapsed .main-content {
   .main-content {
     margin-left: 0 !important;
     max-width: 100% !important;
-    padding-top: 76px; /* Space for mobile header */
+    padding-top: 90px; /* Space for mobile header - increased to prevent content overlap */
     padding-left: 15px;
     padding-right: 15px;
     touch-action: pan-y; /* 允许垂直滚动，左右滑动手势可以被捕获 */
