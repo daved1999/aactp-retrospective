@@ -955,7 +955,7 @@ body.sidebar-collapsed .main-content {
   .main-content {
     margin-left: 0 !important;
     max-width: 100% !important;
-    padding-top: 90px; /* Space for mobile header - increased to prevent content overlap */
+    padding-top: 120px; /* Space for mobile header - increased to prevent content overlap */
     padding-left: 15px;
     padding-right: 15px;
     touch-action: pan-y; /* 允许垂直滚动，左右滑动手势可以被捕获 */
@@ -980,7 +980,7 @@ body.sidebar-collapsed .main-content {
   
   /* Adjust toast position for mobile header */
   .toast {
-    top: 76px;
+    top: 100px;
   }
   
   /* Smaller stats grid */
@@ -1022,7 +1022,7 @@ body.sidebar-collapsed .main-content {
   .page-header {
     flex-direction: column;
     align-items: flex-start;
-    margin-top: 20px; /* 增加上边距确保返回按钮不被遮挡 */
+    margin-top: 0; /* 移除上边距，由main-content的padding-top控制 */
     position: relative;
     z-index: 1;
   }
