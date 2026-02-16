@@ -1022,10 +1022,23 @@ body.sidebar-collapsed .main-content {
   .page-header {
     flex-direction: column;
     align-items: flex-start;
+    margin-top: 20px; /* 增加上边距确保返回按钮不被遮挡 */
+    position: relative;
+    z-index: 1;
   }
   
   .page-header h1 {
     font-size: 20px;
+  }
+  
+  .btn-back {
+    position: relative;
+    z-index: 2; /* 确保返回按钮在最上层 */
+    background: rgba(255, 255, 255, 0.9); /* 添加背景色防止被遮挡 */
+    border: 1px solid #bdc3c7;
+    padding: 10px 16px;
+    font-size: 14px;
+    margin-bottom: 10px; /* 增加下边距 */
   }
 }
 
